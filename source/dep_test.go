@@ -59,7 +59,7 @@ func (test *TestDepSuite) Test_0_ConvertToGitUrl() {
 func (test *TestDepSuite) Test_1_New() {
 	s := &test.Suite
 
-	// If we create the DepManager manager with 'NewDev,' it will create the folders.
+	// If we create the dependency manager, it will create the folders.
 	expected := "https://github.com/sds-framework/test-manager.git"
 	src, err := New(test.src.Url)
 	s.NoError(err)

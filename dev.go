@@ -19,9 +19,8 @@ type Context struct {
 	depClient         *dep_client.Client
 }
 
-// NewDev creates Developer context.
-// Loads it with the Dev Configuration.
-func NewDev(configPath string) (*Context, error) {
+// New creates a developer context and loads it with the dev configuration.
+func New(configPath string) (*Context, error) {
 	ctx := &Context{}
 
 	appConfig, err := config.Load(configPath)

@@ -1,8 +1,9 @@
 package context
 
 import (
-	"github.com/stretchr/testify/suite"
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
 // Define the suite, and absorb the built-in basic suite
@@ -16,15 +17,11 @@ type TestCtxSuite struct {
 // before each test
 func (test *TestCtxSuite) SetupTest() {}
 
-// Test_0_New tests the creation of the DepManager managers
+// Test_0_New tests the creation of the dev context.
 func (test *TestCtxSuite) Test_0_New() {
 	s := &test.Suite
 
-	// Before testing, we make sure that the files don't exist
-	_, err := New(UnknownContext)
-	s.Require().Error(err, "only dev context supported")
-
-	ctx, err := New(DevContext)
+	ctx, err := New("testdata/config.json")
 	s.Require().NoError(err)
 
 	s.Require().Equal(DevContext, ctx.Type())
