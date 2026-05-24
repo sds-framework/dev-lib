@@ -3,9 +3,8 @@ module github.com/sds-framework/dev-lib
 go 1.19
 
 require (
-	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/sds-framework/client-lib v0.0.0-20260519122907-8d1f99d41b57
-	github.com/sds-framework/config-lib v0.0.0-20260524132313-f15a9f86ee1d
+	github.com/sds-framework/config-lib v0.0.0-20260524170747-54ac34160875
 	github.com/sds-framework/datatype-lib v0.0.0-20260519113206-6acc97659255
 	github.com/sds-framework/handler-lib v0.0.0-20260524132142-244a50ce48c6
 	github.com/sds-framework/log-lib v0.0.0-20260519113119-b6fe63f7315e

@@ -28,10 +28,9 @@ type ClientInterface interface {
 	IsServiceRunning(depClient *clientConfig.Client) (bool, error)
 }
 
-func NewClient() (*Client, error) {
-	configHandler := ServiceConfig()
-	socketType := handlerConfig.SocketType(configHandler.Type)
-	c := clientConfig.New("", configHandler.Id, configHandler.Port, socketType).
+func NewClient(runtimeSocket config.Socket) (*Client, error) {
+	socketType := handlerConfig.SocketType(RuntimeSocketType)
+	c := clientConfig.New("", runtimeSocket.Id, uint64(runtimeSocket.Port), socketType).
 		UrlFunc(clientConfig.Url)
 
 	socket, err := client.New(c)

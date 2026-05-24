@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	config "github.com/sds-framework/config-lib"
+	"github.com/sds-framework/dev-lib/runtime"
 	"github.com/sds-framework/log-lib"
 	"github.com/stretchr/testify/suite"
 )
@@ -41,7 +43,10 @@ func (test *TestDevCtxSuite) Test_10_New() {
 	s := test.Suite.Require
 
 	test.logger.Info("new context")
-	ctx, err := New(filepath.Join(test.T().TempDir(), "config.json"))
+	ctx, err := New(filepath.Join(test.T().TempDir(), "config.json"), config.Socket{
+		Id:   runtime.RuntimeHandlerCategory,
+		Port: 0,
+	})
 	s().NoError(err)
 	test.logger.Info("start context")
 	s().NoError(ctx.StartRuntimeHandler())

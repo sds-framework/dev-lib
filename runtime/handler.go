@@ -15,12 +15,13 @@ import (
 )
 
 const (
-	Category         = "dep_handler" // handler category
-	IsServiceRunning = "is-service-running"
-	StartService     = "start-service"
-	StopService      = "stop-service"
-	AddService       = "add-service"
-	RemoveService    = "remove-service"
+	RuntimeHandlerCategory = "dep_handler" // handler category
+	RuntimeSocketType      = handlerConfig.ReplierType
+	IsServiceRunning       = "is-service-running"
+	StartService           = "start-service"
+	StopService            = "stop-service"
+	AddService             = "add-service"
+	RemoveService          = "remove-service"
 )
 
 // Handler acts as the router from other app processes to the runtime.
@@ -29,13 +30,18 @@ type Handler struct {
 	runtime Interface      // Route to the functions from runtime
 }
 
-// ServiceConfig returns the socket configuration of the handler.
-func ServiceConfig() *handlerConfig.Handler {
-	return handlerConfig.NewInternalHandler(handlerConfig.ReplierType, Category, Category)
+// HandlerConfig returns the handler configuration for the runtime socket.
+func HandlerConfig(runtimeSocket config.Socket) *handlerConfig.Handler {
+	return handlerConfig.NewHandler(
+		RuntimeSocketType,
+		runtimeSocket.Id,
+		RuntimeHandlerCategory,
+		uint64(runtimeSocket.Port),
+	)
 }
 
 // NewHandler returns a dependency runtime handler.
-func NewHandler(cfg *config.SdsService) (*Handler, error) {
+func NewHandler(cfg *config.SdsService, runtimeSocket config.Socket) (*Handler, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("nil config")
 	}
@@ -47,7 +53,7 @@ func NewHandler(cfg *config.SdsService) (*Handler, error) {
 		return nil, fmt.Errorf("log.New('dep-handler'): %w", err)
 	}
 
-	handler.SetConfig(ServiceConfig())
+	handler.SetConfig(HandlerConfig(runtimeSocket))
 	err = handler.SetLogger(logger)
 	if err != nil {
 		return nil, fmt.Errorf("handler.SetLogger: %w", err)

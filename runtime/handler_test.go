@@ -39,14 +39,19 @@ func (test *TestHandlerSuite) SetupTest() {
 	logger, _ := log.New("test", false)
 	test.logger = logger
 
+	runtimeSocket := config.Socket{
+		Id:   RuntimeHandlerCategory,
+		Port: 0,
+	}
+
 	var err error
-	test.depHandler, err = NewHandler(&config.SdsService{})
+	test.depHandler, err = NewHandler(&config.SdsService{}, runtimeSocket)
 	s().NoError(err)
 
 	// Start the handler
 	s().NoError(test.depHandler.Start())
 
-	test.depHandlerManager, err = manager_client.New(ServiceConfig())
+	test.depHandlerManager, err = manager_client.New(HandlerConfig(runtimeSocket))
 	s().NoError(err)
 
 	// wait a bit for closing
@@ -63,9 +68,9 @@ func (test *TestHandlerSuite) SetupTest() {
 		TargetType: handlerConfig.SocketType(handlerConfig.ReplierType),
 	}
 
-	config := ServiceConfig()
-	socketType := handlerConfig.SocketType(config.Type)
-	socket, err := client.NewRaw(socketType, fmt.Sprintf("inproc://%s", config.Id))
+	handlerCfg := HandlerConfig(runtimeSocket)
+	socketType := handlerConfig.SocketType(handlerCfg.Type)
+	socket, err := client.NewRaw(socketType, fmt.Sprintf("inproc://%s", handlerCfg.Id))
 	s().NoError(err)
 
 	test.client = socket
