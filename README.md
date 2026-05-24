@@ -1,83 +1,96 @@
 # SDS Configuration
 
-**This module provides packages to configure the service in the *dev* context.**
+This module provides Go types and JSON helpers for an application configuration made of services.
 
-The SDS framework doesn't provide a configuration for the entire application.
-For decentralization, there is no shared data by all services. 
-That includes the configurations as well.
+It is a static data library only:
 
-The SDS services created with [service-lib](https://github.com/ahmetson/service-lib), can access the command line arguments only.
+- `config` defines service metadata (`Service`, `Handler`, `Socket`, `CommandDep`)
+- `config` defines the top-level `SdsService` struct (`services: [...]`), `Load`, and `SdsService.Save`
 
-Everything else must be retrieved from the configuration.
-Including the environment variables too.
+There is no runtime config server, engine, or client API in this module.
 
-The configuration is the key-value database.
-This database is running on a separated thread. 
-As such, it's wrapped by the [handler](https://github.com/ahmetson/handler-lib).
+## App structure
 
-> The *handler* code is defined in the `handler` package.
-
-To access the configuration, other threads must use a client.
-The *client* code is defined in the `client` package.
-
-The configuration data could be grouped into two categories.
-The first group is [custom](#custom-data) data.
-The second group is the [service](#service-meta) configuration itself.
-
-> **todo** 
->
-> In the API reference group the routes by custom data and service meta
-
-## Custom Data
-In the development context, there is only one way to set the custom parameters.
-Only by providing an environment variables or `.env` files.
-
-For example, `PRIVATE_KEY=0xdead` environment variable will be available by `PRIVATE_KEY` key.  
-
-It's possible to pass the group of the environment variables as the `.env` files.
-The `.env` in the same directory as the binary is loaded automatically.
-Other `.env` file paths are passed as the command line arguments.
-
-Example of passing environment files
-
-```shell
-/bin/sds-app --flag --flag2=value ./dev.env ./env_file "C:/Program Files/shared/app"
+```json
+{
+  "services": [
+    {
+      "type": "Independent",
+      "name": "public_api",
+      "handlers": [
+        {
+          "type": "Replier",
+          "socket": {
+            "id": "public_1",
+            "port": 4101
+          },
+          "command-deps": [
+            {
+              "command": "call-user-api",
+              "proxies": ["auth_proxy", "audit_proxy"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
 ```
 
-### Engine
-To turn the environment variables into the configuration parameters, this module uses [spf13/viper](https://github.com/spf13/viper).
-It's defined in the `engine` package.
+See [examples/app-proxy-chain.json](examples/app-proxy-chain.json) for a full proxy-chain example.
 
-> Contributing
-> 
-> To include the configuration from .ini, .toml or .json edit the `engine`.
+## Usage
 
-## Service meta
-The configuration is also responsible for generation, storage of the service parameters.
-The service parameters include the meta parameters such as a list of the handlers and their exposed port.
+```go
+import (
+    config "github.com/sds-framework/config-lib"
+)
 
-The services in the distributed systems must know the other services as well.
-In SDS Framework, the services know nearby services only.
+a, err := config.Load("app.json")
+if err != nil {
+    panic(err)
+}
 
-Nearby services are the extensions and proxies.
+svc, err := a.GetService("public_api")
+if err != nil {
+    panic(err)
+}
 
-The following diagram shows the configuration:
+updated := svc
+updated.Handlers = append(updated.Handlers, config.Handler{
+    Type:   config.ReplierType,
+    Socket: config.Socket{Id: "public_2", Port: 4102},
+})
+if err := a.SetService(updated); err != nil {
+    panic(err)
+}
 
-![User and Handler diagram](_assets/ServiceConfiguration.jpg "Handler diagram")
-*The green box is a service with the proxies and extensions.*
-*The white rectangular is the part stored in the configuration for the service*
+if err := a.Save(); err != nil {
+    panic(err)
+}
+```
 
-### Proxy relationship
-If there is a proxy chain, then the service knows the information about the last proxy.
-All front proxies are unknown for the service.
+## Service Types
 
-### Extension relationship
-If there is an extension, then the service has access to the front of the extension.
-Extension maybe behind the proxies. In this case, the service has access to the first proxy.
-Everything after the proxy is unknown.
+Use `config.New(name, serviceType)` to create a service skeleton, then fill handlers and command dependency metadata.
 
-### Yaml
-The service meta is defined in the `service` package.
+Supported service types:
 
-In the developer context, the meta is stored as the yaml files.
-The yaml file operations are stored in the `app` package.
+- `Independent`
+- `Proxy`
+- `Extension`
+
+Supported handler types:
+
+- `SyncReplier`
+- `Replier`
+- `Publisher`
+- `Pair`
+
+Each `command-deps` entry must name a `command` and at least one routing target: `proxies` and/or `extensions`. A command without dependencies is invalid.
+
+Proxy chains are declared in handler `command-deps` metadata as lists of service names (`proxies: [...]`). Terminal services that only receive routed traffic do not need `command-deps`.
+
+## Packages removed from this module
+
+Previous versions included a dev runtime layer (`engine`, `handler`, `client`, `watch`) for serving config over SDS sockets. That runtime API has been removed. Consumers should load JSON with `config.Load` and save it with `SdsService.Save`.
