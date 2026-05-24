@@ -3,6 +3,9 @@
     {
       "type": "Independent",
       "name": "public_api",
+      "start-command": "go run ./cmd/public-api",
+      "stop-command": "systemctl stop public-api",
+      "status-command": "systemctl status public-api",
       "handlers": [
         {
           "type": "Replier",
@@ -25,6 +28,8 @@
     {
       "type": "Proxy",
       "name": "auth_proxy",
+      "start-command": "go run ./cmd/auth-proxy",
+      "stop-command": "SIGTERM",
       "handlers": [
         {
           "type": "Replier",
@@ -46,6 +51,8 @@
     {
       "type": "Proxy",
       "name": "audit_proxy",
+      "start-command": "go run ./cmd/audit-proxy",
+      "stop-command": "SIGTERM",
       "handlers": [
         {
           "type": "Replier",
@@ -67,6 +74,8 @@
     {
       "type": "Independent",
       "name": "user_service",
+      "start-command": "go run ./cmd/user-service",
+      "stop-command": "SIGTERM",
       "handlers": [
         {
           "type": "Replier",

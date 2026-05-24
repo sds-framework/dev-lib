@@ -19,6 +19,17 @@ func testService() (*Service, Handler, Handler, Handler) {
 	return New("service_id", IndependentType), handlerOfType, handler2OfType, handlerOfType2
 }
 
+func TestNewServiceDefaults(t *testing.T) {
+	serviceConfig := New("service_id", IndependentType)
+
+	if serviceConfig.StopCommand != DefaultStopCommand {
+		t.Fatalf("StopCommand = %q, want %q", serviceConfig.StopCommand, DefaultStopCommand)
+	}
+	if serviceConfig.StatusCommand != "" {
+		t.Fatalf("StatusCommand = %q, want empty", serviceConfig.StatusCommand)
+	}
+}
+
 func TestServiceValidateTypes(t *testing.T) {
 	_, handlerOfType, _, _ := testService()
 

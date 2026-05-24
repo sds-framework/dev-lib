@@ -41,6 +41,32 @@ func TestGetService(t *testing.T) {
 	}
 }
 
+func TestLoadAppliesServiceDefaults(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "app.json")
+	data := []byte(`{
+  "services": [
+    {
+      "type": "Independent",
+      "name": "api",
+      "start-command": "go run ./cmd/api",
+      "handlers": []
+    }
+  ]
+}
+`)
+	if err := os.WriteFile(filePath, data, 0600); err != nil {
+		t.Fatalf("os.WriteFile: %v", err)
+	}
+
+	loaded, err := Load(filePath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.Services[0].StopCommand != DefaultStopCommand {
+		t.Fatalf("StopCommand = %q, want %q", loaded.Services[0].StopCommand, DefaultStopCommand)
+	}
+}
+
 func TestSetService(t *testing.T) {
 	a := SdsService{}
 	first := New("api", IndependentType)
@@ -58,6 +84,8 @@ func TestSetService(t *testing.T) {
 
 	updated := *first
 	updated.StartCommand = "go run ./cmd/api"
+	updated.StopCommand = "systemctl stop api"
+	updated.StatusCommand = "systemctl status api"
 	if err := a.SetService(updated); err != nil {
 		t.Fatalf("SetService update: %v", err)
 	}
@@ -71,6 +99,12 @@ func TestSetService(t *testing.T) {
 	}
 	if found.StartCommand != "go run ./cmd/api" {
 		t.Fatalf("StartCommand = %q, want go run ./cmd/api", found.StartCommand)
+	}
+	if found.StopCommand != "systemctl stop api" {
+		t.Fatalf("StopCommand = %q, want systemctl stop api", found.StopCommand)
+	}
+	if found.StatusCommand != "systemctl status api" {
+		t.Fatalf("StatusCommand = %q, want systemctl status api", found.StatusCommand)
 	}
 }
 
