@@ -18,7 +18,9 @@ import (
 
 // DefaultTimeout is the default time to wait before considering the message is not delivered.
 // Runtime.IsServiceRunning method uses this value before considering the socket as not running.
-const DefaultTimeout = time.Second
+const DefaultTimeout = time.Second * 5
+
+const ManagerHandlerCategory = "manager"
 
 type Process struct {
 	config *config.Service
@@ -43,12 +45,89 @@ func (rt *Runtime) AddService(service config.Service) error {
 	if len(service.Name) == 0 {
 		return fmt.Errorf("service name is empty")
 	}
+	if err := config.ValidateServiceType(service.Type); err != nil {
+		return fmt.Errorf("config.ValidateServiceType('%s'): %w", service.Type, err)
+	}
+	if service.Type == config.IndependentType {
+		return fmt.Errorf("independent service can not be added")
+	}
+	if _, err := rt.config.GetService(service.Name); err == nil {
+		return fmt.Errorf("service('%s') already added", service.Name)
+	}
 
 	if err := rt.config.SetService(service); err != nil {
 		return fmt.Errorf("rt.config.SetService: %w", err)
 	}
 
 	return rt.config.Save()
+}
+
+// SetService updates an existing service in the runtime configuration.
+func (rt *Runtime) SetService(service config.Service) error {
+	if rt == nil || rt.config == nil {
+		return fmt.Errorf("nil config")
+	}
+	if len(service.Name) == 0 {
+		return fmt.Errorf("service name is empty")
+	}
+	if err := config.ValidateServiceType(service.Type); err != nil {
+		return fmt.Errorf("config.ValidateServiceType('%s'): %w", service.Type, err)
+	}
+
+	if service.Type == config.IndependentType {
+		if _, err := rt.config.GetByType(config.IndependentType); err != nil {
+			return fmt.Errorf("rt.config.GetByType('%s'): %w", config.IndependentType, err)
+		}
+		if err := rt.setIndependentService(service); err != nil {
+			return err
+		}
+
+		return rt.config.Save()
+	}
+
+	if _, err := rt.config.GetService(service.Name); err != nil {
+		return fmt.Errorf("rt.config.GetService('%s'): %w", service.Name, err)
+	}
+
+	if err := rt.config.SetService(service); err != nil {
+		return fmt.Errorf("rt.config.SetService: %w", err)
+	}
+
+	return rt.config.Save()
+}
+
+func (rt *Runtime) setIndependentService(service config.Service) error {
+	current, err := rt.config.GetByType(config.IndependentType)
+	if err != nil {
+		return fmt.Errorf("rt.config.GetByType('%s'): %w", config.IndependentType, err)
+	}
+
+	runtimeHandler, err := current.HandlerByCategory(RuntimeHandlerCategory)
+	if err != nil {
+		return fmt.Errorf("current.HandlerByCategory('%s'): %w", RuntimeHandlerCategory, err)
+	}
+
+	nextRuntimeHandler, err := service.HandlerByCategory(RuntimeHandlerCategory)
+	if err != nil {
+		nextRuntimeHandler = config.Handler{
+			Type:     config.HandlerType(RuntimeSocketType),
+			Category: RuntimeHandlerCategory,
+		}
+	}
+	nextRuntimeHandler.Socket = runtimeHandler.Socket
+	service.SetHandler(nextRuntimeHandler)
+
+	if current.Name != service.Name {
+		if err := rt.config.RemoveService(current.Name); err != nil {
+			return fmt.Errorf("rt.config.RemoveService('%s'): %w", current.Name, err)
+		}
+	}
+
+	if err := rt.config.SetService(service); err != nil {
+		return fmt.Errorf("rt.config.SetService: %w", err)
+	}
+
+	return nil
 }
 
 // RemoveService removes a service from the runtime configuration.
@@ -60,7 +139,11 @@ func (rt *Runtime) RemoveService(serviceName string) error {
 		return fmt.Errorf("service name is empty")
 	}
 
-	running, err := rt.serviceRunning(serviceName)
+	if _, err := rt.config.GetService(serviceName); err != nil {
+		return fmt.Errorf("rt.config.GetService('%s'): %w", serviceName, err)
+	}
+
+	running, err := rt.IsServiceRunning(serviceName)
 	if err != nil {
 		return err
 	}
@@ -99,55 +182,84 @@ func (process *Process) copy() *Process {
 }
 
 // StopService stops the dependency service.
-func (rt *Runtime) StopService(c *clientConfig.Client) error {
+func (rt *Runtime) StopService(serviceName string) error {
 	// Make sure it's running
-	running, err := rt.IsServiceRunning(c)
+	if rt == nil || rt.config == nil {
+		return fmt.Errorf("nil config")
+	}
+	if len(serviceName) == 0 {
+		return fmt.Errorf("service name is empty")
+	}
+
+	service, err := rt.config.GetService(serviceName)
 	if err != nil {
-		return fmt.Errorf("runtime.IsServiceRunning(client='%v'): %w", *c, err)
+		return err
+	}
+	if service.Type == config.IndependentType {
+		return fmt.Errorf("service('%s') is independent service, impossible to stop since you are now using it", serviceName)
+	}
+
+	running, err := rt.IsServiceRunning(serviceName)
+	if err != nil {
+		return fmt.Errorf("runtime.IsServiceRunning('%s'): %w", serviceName, err)
 	}
 	if !running {
 		return nil
+	}
+
+	c, err := rt.managerClient(&service)
+	if err != nil {
+		return err
 	}
 
 	sock, err := client.New(c)
 	if err != nil {
 		return fmt.Errorf("zmq.NewSocket: %w", err)
 	}
+	defer sock.Close()
 
 	closeRequest := &message.Request{
-		Command:    "close",
+		Command:    handlerConfig.HandlerClose,
 		Parameters: key_value.New(),
 	}
 
 	sock.Timeout(rt.timeout).Attempt(1)
 
-	_, err = sock.Request(closeRequest)
-	if err == nil {
-		return fmt.Errorf("socket.Request('close'): must exist with error since service closed before replying back")
-	}
+	_, _ = sock.Request(closeRequest)
 
-	running, err = rt.IsServiceRunning(c)
+	running, err = rt.IsServiceRunning(serviceName)
 	if err != nil {
-		return fmt.Errorf("socket.Request('close'): runtime.IsServiceRunning(client='%v'): %w", *c, err)
+		return fmt.Errorf("socket.Request('%s'): runtime.IsServiceRunning('%s'): %w", handlerConfig.HandlerClose, serviceName, err)
 	}
 
 	if running {
 		return fmt.Errorf("runtime is running even after closing")
 	}
 
-	err = sock.Close()
-	if err != nil {
-		return fmt.Errorf("socket.Close: %w", err)
-	}
-
 	return nil
 }
 
-// IsServiceRunning checks whether the given client running or not.
-// If the service is running on another process or on another node,
-// then that service should expose the port.
-func (rt *Runtime) IsServiceRunning(c *clientConfig.Client) (bool, error) {
-	c.UrlFunc(clientConfig.Url)
+// IsServiceRunning checks whether the given service is running or not.
+func (rt *Runtime) IsServiceRunning(serviceName string) (bool, error) {
+	if rt == nil || rt.config == nil {
+		return false, fmt.Errorf("nil config")
+	}
+	if len(serviceName) == 0 {
+		return false, fmt.Errorf("service name is empty")
+	}
+
+	service, err := rt.config.GetService(serviceName)
+	if err != nil {
+		return false, err
+	}
+	if service.Type == config.IndependentType {
+		return true, nil
+	}
+
+	c, err := rt.managerClient(&service)
+	if err != nil {
+		return false, err
+	}
 
 	sock, err := client.New(c)
 	if err != nil {
@@ -225,25 +337,10 @@ func (rt *Runtime) refreshServiceCount(serviceName string) {
 	rt.sameServices[serviceName] = count
 }
 
-func managerHandler(service *config.Service) (config.Handler, error) {
-	for _, handler := range service.Handlers {
-		if strings.Contains(handler.Socket.Id, "manager") {
-			return handler, nil
-		}
-	}
-
-	return config.Handler{}, fmt.Errorf("manager handler not found for service('%s')", service.Name)
-}
-
-func (rt *Runtime) serviceRunning(serviceName string) (bool, error) {
-	service, err := rt.serviceConfig(serviceName)
+func (rt *Runtime) managerClient(service *config.Service) (*clientConfig.Client, error) {
+	handler, err := service.HandlerByCategory(ManagerHandlerCategory)
 	if err != nil {
-		return false, err
-	}
-
-	handler, err := managerHandler(service)
-	if err != nil {
-		return false, err
+		return nil, fmt.Errorf("no manager found in the '%s' service, please set its config", service.Name)
 	}
 
 	client := clientConfig.New(
@@ -252,25 +349,9 @@ func (rt *Runtime) serviceRunning(serviceName string) (bool, error) {
 		uint64(handler.Socket.Port),
 		handlerConfig.SocketType(handlerConfig.HandlerType(handler.Type)),
 	)
+	client.UrlFunc(clientConfig.Url)
 
-	return rt.IsServiceRunning(client)
-}
-
-func (rt *Runtime) serviceConfig(serviceName string) (*config.Service, error) {
-	if rt == nil || rt.config == nil {
-		return nil, fmt.Errorf("nil config")
-	}
-	if len(serviceName) == 0 {
-		return nil, fmt.Errorf("service name is empty")
-	}
-
-	for i := range rt.config.Services {
-		if rt.config.Services[i].Name == serviceName {
-			return &rt.config.Services[i], nil
-		}
-	}
-
-	return nil, fmt.Errorf("service('%s') not found", serviceName)
+	return client, nil
 }
 
 // StartService runs the service start command.
@@ -278,19 +359,18 @@ func (rt *Runtime) serviceConfig(serviceName string) (*config.Service, error) {
 //
 // Note that, services can crash during the initialization.
 // In that case, you should use Runtime.OnStop method.
-//
-// If a parent is given, it's passed as ParentFlag.
-// Todo, move all Flags from service-lib to config-lig.
-// Todo, use the ParentFlag from the config lig
 func (rt *Runtime) StartService(serviceName string, optionalParent ...*clientConfig.Client) (string, error) {
-	if rt == nil {
-		return "", fmt.Errorf("nil runtime")
+	if rt == nil || rt.config == nil {
+		return "", fmt.Errorf("nil config")
 	}
-	serviceConfig, err := rt.serviceConfig(serviceName)
+	if len(serviceName) == 0 {
+		return "", fmt.Errorf("service name is empty")
+	}
+	serviceConfig, err := rt.config.GetService(serviceName)
 	if err != nil {
 		return "", err
 	}
-	process := &Process{config: serviceConfig}
+	process := &Process{config: &serviceConfig}
 
 	if len(optionalParent) > 1 {
 		return "", fmt.Errorf("too many optional parameters, either no parameter or 1 parameter required")

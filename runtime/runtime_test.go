@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pebbe/zmq4"
 	clientConfig "github.com/sds-framework/client-lib/config"
 	config "github.com/sds-framework/config-lib"
 	"github.com/sds-framework/log-lib"
@@ -58,7 +57,20 @@ func (test *TestDepManagerSuite) SetupTest() {
 	test.runtime = &Runtime{
 		config: &config.SdsService{
 			Services: []config.Service{
-				{Name: "test-manager", StartCommand: "test"},
+				{
+					Name:         "test-manager",
+					StartCommand: "test",
+					Handlers: []config.Handler{
+						{
+							Type:     config.ReplierType,
+							Category: ManagerHandlerCategory,
+							Socket: config.Socket{
+								Id:   "test-manager",
+								Port: 6000,
+							},
+						},
+					},
+				},
 			},
 		},
 		sameServices:     make(map[string]int),
@@ -130,7 +142,8 @@ func (test *TestDepManagerSuite) Test_12_ServiceConfig() {
 		StartCommand: "echo extra",
 		Handlers: []config.Handler{
 			{
-				Type: config.ReplierType,
+				Type:     config.ReplierType,
+				Category: ManagerHandlerCategory,
 				Socket: config.Socket{
 					Id:   "extra-service-manager",
 					Port: 6001,
@@ -141,14 +154,14 @@ func (test *TestDepManagerSuite) Test_12_ServiceConfig() {
 	err = test.runtime.AddService(service)
 	s().NoError(err)
 
-	got, err := test.runtime.serviceConfig("extra-service")
+	got, err := test.runtime.config.GetService("extra-service")
 	s().NoError(err)
 	s().Equal("echo extra", got.StartCommand)
 
 	err = test.runtime.RemoveService("extra-service")
 	s().NoError(err)
 
-	_, err = test.runtime.serviceConfig("extra-service")
+	_, err = test.runtime.config.GetService("extra-service")
 	s().Error(err)
 
 	err = test.runtime.RemoveService("missing")
@@ -245,12 +258,6 @@ func (test *TestDepManagerSuite) Test_21_RunError() {
 func (test *TestDepManagerSuite) Test_22_Running() {
 	s := test.Require
 
-	client := &clientConfig.Client{
-		ServiceUrl: "test-manager",
-		Id:         test.id,
-		Port:       6000,
-		TargetType: zmq4.REP,
-	}
 	localBin := path.BinPath(filepath.Join(test.localTestDir, "server", "bin"), "test")
 	test.setServiceStartCommand(test.id, localBin)
 
@@ -261,7 +268,7 @@ func (test *TestDepManagerSuite) Test_22_Running() {
 	s().NotNil(test.runtime.runningProcesses[id]) // cmd == nil indicates that the program was closed
 
 	// Check is the service running
-	running, err := test.runtime.IsServiceRunning(client)
+	running, err := test.runtime.IsServiceRunning(test.id)
 	s().NoError(err)
 	s().True(running)
 
@@ -272,7 +279,7 @@ func (test *TestDepManagerSuite) Test_22_Running() {
 	s().NoError(err)
 
 	s().Nil(test.runtime.runningProcesses[id]) // cmd == nil indicates that the program was closed
-	running, err = test.runtime.IsServiceRunning(client)
+	running, err = test.runtime.IsServiceRunning(test.id)
 	s().NoError(err)
 	s().False(running)
 }

@@ -13,6 +13,9 @@ type Interface interface {
 	// AddService registers a service in the runtime configuration.
 	AddService(service config.Service) error
 
+	// SetService updates an existing service in the runtime configuration.
+	SetService(service config.Service) error
+
 	// RemoveService removes a service from the runtime configuration.
 	RemoveService(serviceName string) error
 
@@ -20,8 +23,8 @@ type Interface interface {
 	StartService(serviceName string, optionalParent ...*clientConfig.Client) (string, error)
 
 	// IsServiceRunning checks is the service running or not.
-	IsServiceRunning(*clientConfig.Client) (bool, error)
+	IsServiceRunning(serviceName string) (bool, error)
 
 	// StopService stops the given dependency service.
-	StopService(c *clientConfig.Client) error
+	StopService(serviceName string) error
 }

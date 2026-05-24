@@ -21,11 +21,12 @@ type ClientInterface interface {
 	Timeout(duration time.Duration)
 	Attempt(attempt uint8)
 
-	StopService(depClient *clientConfig.Client) error
+	StopService(serviceName string) error
 	AddService(service config.Service) error
+	SetService(service config.Service) error
 	RemoveService(serviceName string) error
 	StartService(serviceName string, parent *clientConfig.Client) (string, error)
-	IsServiceRunning(depClient *clientConfig.Client) (bool, error)
+	IsServiceRunning(serviceName string) (bool, error)
 }
 
 func NewClient(runtimeSocket config.Socket) (*Client, error) {
@@ -56,11 +57,11 @@ func (c *Client) Close() error {
 }
 
 // StopService stops the running dependency service.
-func (c *Client) StopService(depClient *clientConfig.Client) error {
+func (c *Client) StopService(serviceName string) error {
 	req := message.Request{
 		Command: StopService,
 		Parameters: key_value.New().
-			Set("dep", depClient),
+			Set("service", serviceName),
 	}
 
 	if c == nil {
@@ -94,6 +95,26 @@ func (c *Client) AddService(service config.Service) error {
 	reply, err := c.socket.Request(&req)
 	if err != nil {
 		return fmt.Errorf("socket.Submit('%s'): %w", AddService, err)
+	}
+
+	if !reply.IsOK() {
+		return fmt.Errorf("reply.Message: %s", reply.ErrorMessage())
+	}
+
+	return nil
+}
+
+// SetService updates an existing service in the runtime configuration.
+func (c *Client) SetService(service config.Service) error {
+	req := message.Request{
+		Command: SetService,
+		Parameters: key_value.New().
+			Set("service", service),
+	}
+
+	reply, err := c.socket.Request(&req)
+	if err != nil {
+		return fmt.Errorf("socket.Submit('%s'): %w", SetService, err)
 	}
 
 	if !reply.IsOK() {
@@ -150,11 +171,11 @@ func (c *Client) StartService(serviceName string, parent *clientConfig.Client) (
 }
 
 // IsServiceRunning checks is the service running or not.
-func (c *Client) IsServiceRunning(depClient *clientConfig.Client) (bool, error) {
+func (c *Client) IsServiceRunning(serviceName string) (bool, error) {
 	req := message.Request{
 		Command: IsServiceRunning,
 		Parameters: key_value.New().
-			Set("dep", depClient),
+			Set("service", serviceName),
 	}
 
 	reply, err := c.socket.Request(&req)
