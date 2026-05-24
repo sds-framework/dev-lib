@@ -5,8 +5,6 @@ import (
 	"slices"
 )
 
-const DefaultStopCommand = "SIGTERM"
-
 type CommandDep struct {
 	Command    string   `json:"command"`
 	Proxies    []string `json:"proxies,omitempty"`
@@ -29,32 +27,20 @@ type Handler struct {
 // Fields
 //   - Type is the type of service. For example, ProxyType, IndependentType or ExtensionType
 //   - Name of the service
-//   - StartCommand is the command used to start the service
-//   - StopCommand is the command used to stop the service. Defaults to SIGTERM
-//   - StatusCommand is an optional command used to check service status
 //   - Handlers that are listed in the service
 type Service struct {
-	Type          Type      `json:"type"`
-	Name          string    `json:"name"`
-	StartCommand  string    `json:"start-command"`
-	StopCommand   string    `json:"stop-command"`
-	StatusCommand string    `json:"status-command,omitempty"`
-	Handlers      []Handler `json:"handlers"`
+	Type         Type      `json:"type"`
+	Name         string    `json:"name"`
+	StartCommand string    `json:"start-command"`
+	Handlers     []Handler `json:"handlers"`
 }
 
 // New generates a service configuration.
 func New(name string, serviceType Type) *Service {
 	return &Service{
-		Type:        serviceType,
-		Name:        name,
-		StopCommand: DefaultStopCommand,
-		Handlers:    make([]Handler, 0),
-	}
-}
-
-func (s *Service) setDefaults() {
-	if len(s.StopCommand) == 0 {
-		s.StopCommand = DefaultStopCommand
+		Type:     serviceType,
+		Name:     name,
+		Handlers: make([]Handler, 0),
 	}
 }
 

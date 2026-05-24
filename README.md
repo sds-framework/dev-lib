@@ -17,9 +17,6 @@ There is no runtime config server, engine, or client API in this module.
     {
       "type": "Independent",
       "name": "public_api",
-      "start-command": "go run ./cmd/public-api",
-      "stop-command": "systemctl stop public-api",
-      "status-command": "systemctl status public-api",
       "handlers": [
         {
           "type": "Replier",
@@ -76,7 +73,6 @@ if err := a.Save(); err != nil {
 ## Service Types
 
 Use `config.New(name, serviceType)` to create a service skeleton, then fill handlers and command dependency metadata.
-Services may define `start-command`, `stop-command`, and `status-command`. `stop-command` defaults to `SIGTERM` when omitted, and `status-command` is optional.
 
 Supported service types:
 

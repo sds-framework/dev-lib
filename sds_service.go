@@ -34,9 +34,6 @@ func Load(filePath string) (SdsService, error) {
 	if err := json.Unmarshal(data, &appConfig); err != nil {
 		return SdsService{}, fmt.Errorf("json.Unmarshal: %w", err)
 	}
-	for i := range appConfig.Services {
-		appConfig.Services[i].setDefaults()
-	}
 
 	return appConfig, nil
 }
@@ -77,7 +74,6 @@ func (a *SdsService) SetService(s Service) error {
 	if a == nil {
 		return fmt.Errorf("app struct is nil")
 	}
-	s.setDefaults()
 
 	found := false
 	for i, old := range a.Services {
