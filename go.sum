@@ -35,8 +35,6 @@ github.com/muesli/termenv v0.15.2 h1:GohcuySI0QmI3wN8Ok9PtKGkgkFIk7y6Vpb5PvrY+Wo
 github.com/muesli/termenv v0.15.2/go.mod h1:Epx+iuz8sNs7mNKhxzH4fWXGNpZwUaJKRS1noLXviQ8=
 github.com/pebbe/zmq4 v1.2.10 h1:wQkqRZ3CZeABIeidr3e8uQZMMH5YAykA/WN0L5zkd1c=
 github.com/pebbe/zmq4 v1.2.10/go.mod h1:nqnPueOapVhE2wItZ0uOErngczsJdLOGkebMxaO8r48=
-github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5 h1:Ii+DKncOVM8Cu1Hc+ETb5K+23HdAMvESYE3ZJ5b5cMI=
-github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5/go.mod h1:iIss55rKnNBTvrwdmkUpLnDpZoAHvWaiq5+iMmen4AE=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
@@ -46,12 +44,12 @@ github.com/rivo/uniseg v0.4.4/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUc
 github.com/rogpeppe/go-internal v1.8.1 h1:geMPLpDpQOgVyCg5z5GoRwLHepNdb71NXb67XFkP+Eg=
 github.com/sds-framework/client-lib v0.0.0-20260519122907-8d1f99d41b57 h1:lc4jCJ4DeDmpLvYso6a09pmp2bAhmXm5Ru2UDemNYWs=
 github.com/sds-framework/client-lib v0.0.0-20260519122907-8d1f99d41b57/go.mod h1:AReE+OOAQ9mAgE/BocS59XjHHwVK/sqSao4N1LVAyWk=
-github.com/sds-framework/config-lib v0.0.0-20260524063103-5db1102193d5 h1:F/xaP+Hj89JOo7/5z9wCcvZy5vzLoS1INrgToJkqqp8=
-github.com/sds-framework/config-lib v0.0.0-20260524063103-5db1102193d5/go.mod h1:mPM1kVRp9EjwQEyBzYW921JjXRpdx3dEMI8ncrcX3lM=
+github.com/sds-framework/config-lib v0.0.0-20260524132313-f15a9f86ee1d h1:OF2uA5DrletZ1m1Kd6ePLOi2yJVapsurPWh5gx8kLkk=
+github.com/sds-framework/config-lib v0.0.0-20260524132313-f15a9f86ee1d/go.mod h1:mPM1kVRp9EjwQEyBzYW921JjXRpdx3dEMI8ncrcX3lM=
 github.com/sds-framework/datatype-lib v0.0.0-20260519113206-6acc97659255 h1:+/+8BNEEPRA+pFQF3rOI5UkLrdogjdMj5siRHBo2Yko=
 github.com/sds-framework/datatype-lib v0.0.0-20260519113206-6acc97659255/go.mod h1:QD+naKxneE4a35lVe7sw3qU4gbHBug1Z1WpWQA78780=
-github.com/sds-framework/handler-lib v0.0.0-20260520152432-316a3cca1151 h1:PXs0iTI9WVv4f/ibbWDHiTnzg5hooM/73KJT/ucYQrA=
-github.com/sds-framework/handler-lib v0.0.0-20260520152432-316a3cca1151/go.mod h1:5htWBooc1xS5v82Oz87wPiH0+TOuigmFeucyGKBEirY=
+github.com/sds-framework/handler-lib v0.0.0-20260524132142-244a50ce48c6 h1:HXUKNuexPneSggjEs2cz4ASdi0m8NxZdfmhsIsEf/Qk=
+github.com/sds-framework/handler-lib v0.0.0-20260524132142-244a50ce48c6/go.mod h1:5htWBooc1xS5v82Oz87wPiH0+TOuigmFeucyGKBEirY=
 github.com/sds-framework/log-lib v0.0.0-20260519113119-b6fe63f7315e h1:P2moT2MNcMYpzXvos/ZKiKX/wI/n6zCKPoBe/vlTHTk=
 github.com/sds-framework/log-lib v0.0.0-20260519113119-b6fe63f7315e/go.mod h1:ihGbhsnkEwUJBjhfcUwihO9wSXpRx9aEIj8+W6P9Aio=
 github.com/sds-framework/os-lib v0.0.0-20260521183157-f0aa0d7add8a h1:1LtMoJ+wZlALR4m8rxeLzODywTbpAU9BnpZLpwz0b48=

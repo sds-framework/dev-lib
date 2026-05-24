@@ -5,9 +5,9 @@ go 1.19
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/sds-framework/client-lib v0.0.0-20260519122907-8d1f99d41b57
-	github.com/sds-framework/config-lib v0.0.0-20260524063103-5db1102193d5
+	github.com/sds-framework/config-lib v0.0.0-20260524132313-f15a9f86ee1d
 	github.com/sds-framework/datatype-lib v0.0.0-20260519113206-6acc97659255
-	github.com/sds-framework/handler-lib v0.0.0-20260520152432-316a3cca1151
+	github.com/sds-framework/handler-lib v0.0.0-20260524132142-244a50ce48c6
 	github.com/sds-framework/log-lib v0.0.0-20260519113119-b6fe63f7315e
 	github.com/sds-framework/os-lib v0.0.0-20260521183157-f0aa0d7add8a
 	github.com/stretchr/testify v1.8.4
@@ -28,7 +28,6 @@ require (
 	github.com/muesli/kmeans v0.3.1 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
-	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect

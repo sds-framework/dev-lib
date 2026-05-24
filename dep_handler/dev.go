@@ -16,10 +16,12 @@ import (
 )
 
 const (
-	Category   = "dep_handler" // handler category
-	DepRunning = "dep-running" // the command to check is dependency running
-	RunDep     = "run-dep"     // the command to run the dependency
-	CloseDep   = "close-dep"   // the command to stop the running dependency
+	Category         = "dep_handler" // handler category
+	IsServiceRunning = "is-service-running"
+	StartService     = "start-service"
+	StopService      = "stop-service"
+	AddService       = "add-service"
+	RemoveService    = "remove-service"
 )
 
 // Handler acts as the router from other app processes to the runtime.
@@ -30,7 +32,7 @@ type DepHandler struct {
 
 // ServiceConfig returns the socket configuration of the handler
 func ServiceConfig() *handlerConfig.Handler {
-	return handlerConfig.NewInternalHandler(handlerConfig.ReplierType, Category)
+	return handlerConfig.NewInternalHandler(handlerConfig.ReplierType, Category, Category)
 }
 
 // New dep handler returned
@@ -58,12 +60,12 @@ func New(cfg *config.SdsService) (*DepHandler, error) {
 	}, nil
 }
 
-// onDepRunning checks whether the dependency is running or not.
+// onIsServiceRunning checks whether the dependency is running or not.
 // Requires:
 //   - 'dep' of the clientConfig.Client.
 //
 // Returns 'running' boolean result
-func (h *DepHandler) onDepRunning(req message.RequestInterface) message.ReplyInterface {
+func (h *DepHandler) onIsServiceRunning(req message.RequestInterface) message.ReplyInterface {
 	kv, err := req.RouteParameters().NestedValue("dep")
 	if err != nil {
 		return req.Fail(fmt.Sprintf("req.Parameters.GetKeyValue('dep'): %v", err))
@@ -77,25 +79,23 @@ func (h *DepHandler) onDepRunning(req message.RequestInterface) message.ReplyInt
 
 	c.UrlFunc(clientConfig.Url)
 
-	running, err := h.runtime.Running(&c)
+	running, err := h.runtime.IsServiceRunning(&c)
 	if err != nil {
-		return req.Fail(fmt.Sprintf("h.runtime.Running: %v", err))
+		return req.Fail(fmt.Sprintf("h.runtime.IsServiceRunning: %v", err))
 	}
 
 	params := key_value.New().Set("running", running)
 	return req.Ok(params)
 }
 
-// onRunDep runs the dependency.
+// onStartService starts the dependency service.
 // Requires:
-//   - 'url' string parameter,
-//   - 'id' string parameter,
+//   - 'service' string parameter,
 //   - 'parent' of the clientConfig.Client type.
-//   - 'local_bin' string, optionally
 //
 // Returns nothing.
 // todo make it publish the result through publisher, so user won't wait for the result.
-func (h *DepHandler) onRunDep(req message.RequestInterface) message.ReplyInterface {
+func (h *DepHandler) onStartService(req message.RequestInterface) message.ReplyInterface {
 	kv, err := req.RouteParameters().NestedValue("parent")
 	if err != nil {
 		return req.Fail(fmt.Sprintf("req.Parameters.GetKeyValue('parent'): %v", err))
@@ -109,37 +109,66 @@ func (h *DepHandler) onRunDep(req message.RequestInterface) message.ReplyInterfa
 
 	parent.UrlFunc(clientConfig.Url)
 
-	url, err := req.RouteParameters().StringValue("url")
+	serviceName, err := req.RouteParameters().StringValue("service")
 	if err != nil {
-		return req.Fail(fmt.Sprintf("req.Parameters.GetString('url'): %v", err))
+		serviceName, err = req.RouteParameters().StringValue("url")
+		if err != nil {
+			return req.Fail(fmt.Sprintf("req.Parameters.GetString('service'): %v", err))
+		}
 	}
 
-	id, err := req.RouteParameters().StringValue("id")
+	id, err := h.runtime.StartService(serviceName, &parent)
 	if err != nil {
-		return req.Fail(fmt.Sprintf("req.Parameters.GetString('id'): %v", err))
+		return req.Fail(fmt.Sprintf("h.runtime.StartService(service: '%s'): %v", serviceName, err))
 	}
 
-	optionalLocalBin, _ := req.RouteParameters().StringValue("local_bin")
+	return req.Ok(key_value.New().Set("id", id))
+}
 
-	dep, err := runtime.NewDep(url, "", optionalLocalBin)
+// onAddService registers a service in the runtime configuration.
+// Requires 'service' of the config.Service type.
+func (h *DepHandler) onAddService(req message.RequestInterface) message.ReplyInterface {
+	kv, err := req.RouteParameters().NestedValue("service")
 	if err != nil {
-		return req.Fail(fmt.Sprintf("runtime.NewDep('%s', '', '%s'): %v", url, optionalLocalBin, err))
+		return req.Fail(fmt.Sprintf("req.Parameters.GetKeyValue('service'): %v", err))
 	}
 
-	err = h.runtime.Run(dep, id, &parent)
+	var service config.Service
+	err = kv.Interface(&service)
 	if err != nil {
-		return req.Fail(fmt.Sprintf("h.runtime.Run(url: '%s', id: '%s'): %v", url, id, err))
+		return req.Fail(fmt.Sprintf("kv.Interface: %v", err))
+	}
+
+	err = h.runtime.AddService(service)
+	if err != nil {
+		return req.Fail(fmt.Sprintf("h.runtime.AddService('%s'): %v", service.Name, err))
 	}
 
 	return req.Ok(key_value.New())
 }
 
-// onCloseDep stops the dependency.
+// onRemoveService removes a service from the runtime configuration.
+// Requires 'service' string parameter with the service name.
+func (h *DepHandler) onRemoveService(req message.RequestInterface) message.ReplyInterface {
+	serviceName, err := req.RouteParameters().StringValue("service")
+	if err != nil {
+		return req.Fail(fmt.Sprintf("req.Parameters.GetString('service'): %v", err))
+	}
+
+	err = h.runtime.RemoveService(serviceName)
+	if err != nil {
+		return req.Fail(fmt.Sprintf("h.runtime.RemoveService('%s'): %v", serviceName, err))
+	}
+
+	return req.Ok(key_value.New())
+}
+
+// onStopService stops the dependency.
 // Requires 'dep' of the clientConfig.Client type.
 // Returns nothing.
 //
 // Todo make it publish the result through publisher, so user won't wait for the result.
-func (h *DepHandler) onCloseDep(req message.RequestInterface) message.ReplyInterface {
+func (h *DepHandler) onStopService(req message.RequestInterface) message.ReplyInterface {
 	kv, err := req.RouteParameters().NestedValue("dep")
 	if err != nil {
 		return req.Fail(fmt.Sprintf("req.Parameters.GetKeyValue('dep'): %v", err))
@@ -153,9 +182,9 @@ func (h *DepHandler) onCloseDep(req message.RequestInterface) message.ReplyInter
 
 	c.UrlFunc(clientConfig.Url)
 
-	err = h.runtime.Close(&c)
+	err = h.runtime.StopService(&c)
 	if err != nil {
-		return req.Fail(fmt.Sprintf("h.runtime.Close: %v", err))
+		return req.Fail(fmt.Sprintf("h.runtime.StopService: %v", err))
 	}
 
 	return req.Ok(key_value.New())
@@ -163,14 +192,20 @@ func (h *DepHandler) onCloseDep(req message.RequestInterface) message.ReplyInter
 
 // Start the dependency handler with the available operations.
 func (h *DepHandler) Start() error {
-	if err := h.handler.Route(DepRunning, h.onDepRunning); err != nil {
-		return fmt.Errorf("h.handler.Route('%s'): %v", DepRunning, err)
+	if err := h.handler.Route(IsServiceRunning, h.onIsServiceRunning); err != nil {
+		return fmt.Errorf("h.handler.Route('%s'): %v", IsServiceRunning, err)
 	}
-	if err := h.handler.Route(RunDep, h.onRunDep); err != nil {
-		return fmt.Errorf("h.handler.Route('%s'): %v", RunDep, err)
+	if err := h.handler.Route(StartService, h.onStartService); err != nil {
+		return fmt.Errorf("h.handler.Route('%s'): %v", StartService, err)
 	}
-	if err := h.handler.Route(CloseDep, h.onCloseDep); err != nil {
-		return fmt.Errorf("h.handler.Route('%s'): %v", CloseDep, err)
+	if err := h.handler.Route(StopService, h.onStopService); err != nil {
+		return fmt.Errorf("h.handler.Route('%s'): %v", StopService, err)
+	}
+	if err := h.handler.Route(AddService, h.onAddService); err != nil {
+		return fmt.Errorf("h.handler.Route('%s'): %v", AddService, err)
+	}
+	if err := h.handler.Route(RemoveService, h.onRemoveService); err != nil {
+		return fmt.Errorf("h.handler.Route('%s'): %v", RemoveService, err)
 	}
 
 	return h.handler.Start()

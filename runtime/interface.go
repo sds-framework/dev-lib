@@ -2,6 +2,7 @@ package runtime
 
 import (
 	clientConfig "github.com/sds-framework/client-lib/config"
+	config "github.com/sds-framework/config-lib"
 )
 
 // Interface is implemented by the dependency runtime.
@@ -9,12 +10,18 @@ import (
 // It doesn't have the `Stop` command.
 // Because, stopping must be done by the remote call from other services.
 type Interface interface {
-	// Run the dependency with the given id and parent.
-	Run(dep *Dep, id string, optionalParent ...*clientConfig.Client) error
+	// AddService registers a service in the runtime configuration.
+	AddService(service config.Service) error
 
-	// Running checks is the service running or not
-	Running(*clientConfig.Client) (bool, error)
+	// RemoveService removes a service from the runtime configuration.
+	RemoveService(serviceName string) error
 
-	// Close the given dependency service
-	Close(c *clientConfig.Client) error
+	// StartService starts the dependency service with the given parent.
+	StartService(serviceName string, optionalParent ...*clientConfig.Client) (string, error)
+
+	// IsServiceRunning checks is the service running or not.
+	IsServiceRunning(*clientConfig.Client) (bool, error)
+
+	// StopService stops the given dependency service.
+	StopService(c *clientConfig.Client) error
 }

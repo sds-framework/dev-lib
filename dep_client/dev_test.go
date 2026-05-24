@@ -81,8 +81,8 @@ func (test *TestDepClientSuite) TearDownTest() {
 	time.Sleep(time.Millisecond * 100)
 }
 
-//// Test_13_Run tests DepRunning, RunDep and CloseDep commands.
-//func (test *TestDepClientSuite) Test_13_Run() {
+//// Test_13_Start tests IsServiceRunning, StartService and StopService commands.
+//func (test *TestDepClientSuite) Test_13_Start() {
 //	s := test.Suite.Require
 //
 //	depClient := &clientConfig.Client{
@@ -98,7 +98,7 @@ func (test *TestDepClientSuite) TearDownTest() {
 //
 //	// Let's run the dependency
 //	test.logger.Info("request to run the dependency", "srcUrl", src.Url, "id", test.id)
-//	err = test.client.Run(src.Url, test.id, test.parent)
+//	id, err := test.client.StartService(src.Url, test.parent)
 //	s().NoError(err)
 //
 //	// Just wait a bit for initialization of the service
@@ -106,15 +106,15 @@ func (test *TestDepClientSuite) TearDownTest() {
 //
 //	// check that service is running
 //	test.logger.Info("check dependency status")
-//	running, err := test.client.IsRunning(depClient)
+//	running, err := test.client.IsServiceRunning(depClient)
 //	s().NoError(err)
 //	s().True(running)
 //	test.logger.Info("status returned from dependency manager", "running", running, "error", err)
 //
-//	// CloseDep the service
+//	// StopService the service
 //	test.logger.Info("send a signal to close dependency")
 //
-//	err = test.client.CloseDep(depClient)
+//	err = test.client.StopService(depClient)
 //	s().NoError(err)
 //
 //	// Wait a bit for closing the source process
@@ -122,7 +122,7 @@ func (test *TestDepClientSuite) TearDownTest() {
 //
 //	// Checking for a running source after it was closed must fail
 //	test.logger.Info("check again the dependency status")
-//	running, err = test.client.IsRunning(depClient)
+//	running, err = test.client.IsServiceRunning(depClient)
 //	test.logger.Info("closed dependency status returned", "running", running, "error", err)
 //	s().NoError(err)
 //	s().False(running)

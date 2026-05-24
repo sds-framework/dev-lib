@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -30,6 +29,20 @@ type TestDepManagerSuite struct {
 	localTestDir string
 }
 
+func (test *TestDepManagerSuite) setServiceStartCommand(name string, startCommand string) {
+	for i := range test.runtime.config.Services {
+		if test.runtime.config.Services[i].Name == name {
+			test.runtime.config.Services[i].StartCommand = startCommand
+			return
+		}
+	}
+
+	test.runtime.config.Services = append(test.runtime.config.Services, config.Service{
+		Name:         name,
+		StartCommand: startCommand,
+	})
+}
+
 // Make sure that Account is set to five
 // before each test
 func (test *TestDepManagerSuite) SetupTest() {
@@ -43,9 +56,14 @@ func (test *TestDepManagerSuite) SetupTest() {
 	test.currentDir = currentDir
 
 	test.runtime = &Runtime{
-		config:      &config.SdsService{},
-		runningDeps: make(map[string]*Dep, 0),
-		timeout:     DefaultTimeout,
+		config: &config.SdsService{
+			Services: []config.Service{
+				{Name: "test-manager", StartCommand: "test"},
+			},
+		},
+		sameServices:     make(map[string]int),
+		runningProcesses: make(map[string]*Process, 0),
+		timeout:          DefaultTimeout,
 	}
 
 	// A valid source code that we want to download
@@ -69,63 +87,80 @@ func (test *TestDepManagerSuite) Test_0_New() {
 	depRuntime := New(cfg)
 	s().NotNil(depRuntime)
 	s().Same(cfg, depRuntime.config)
-	s().NotNil(depRuntime.runningDeps)
+	s().NotNil(depRuntime.sameServices)
+	s().NotNil(depRuntime.runningProcesses)
 	s().Equal(DefaultTimeout, depRuntime.timeout)
 
 	test.runtime = depRuntime
 }
 
-// Test_12_NewDep tests NewDep function.
-func (test *TestDepManagerSuite) Test_12_NewDep() {
+func (test *TestDepManagerSuite) Test_10_GenerateId() {
 	s := test.Require
 
-	localSrcPath := path.AbsDir(test.currentDir, "_localSrc")
-
-	// default dep managed by the Runtime
-	dep, err := NewDep(test.url, "", "")
+	id, err := test.runtime.GenerateId(test.id)
 	s().NoError(err)
-	s().Len(dep.LocalUrl(), 0)
-	s().Zero(dep.binPath)
+	s().Equal("test-manager1", id)
+	s().Equal(1, test.runtime.sameServices[test.id])
 
-	// trying to create a dep with the invalid url must fail
-	_, err = NewDep("git://invalid_url", "", "")
+	test.runtime.runningProcesses[id] = &Process{
+		config: &test.runtime.config.Services[0],
+		id:     id,
+	}
+
+	id, err = test.runtime.GenerateId(test.id)
+	s().NoError(err)
+	s().Equal("test-manager2", id)
+	s().Equal(2, test.runtime.sameServices[test.id])
+
+	delete(test.runtime.runningProcesses, "test-manager1")
+	test.runtime.refreshServiceCount(test.id)
+	s().Equal(0, test.runtime.sameServices[test.id])
+}
+
+func (test *TestDepManagerSuite) Test_12_ServiceConfig() {
+	s := test.Require
+
+	cfgPath := filepath.Join(test.T().TempDir(), "app.json")
+	cfg, err := config.Load(cfgPath)
+	s().NoError(err)
+	test.runtime = New(&cfg)
+
+	service := config.Service{
+		Name:         "extra-service",
+		StartCommand: "echo extra",
+		Handlers: []config.Handler{
+			{
+				Type: config.ReplierType,
+				Socket: config.Socket{
+					Id:   "extra-service-manager",
+					Port: 6001,
+				},
+			},
+		},
+	}
+	err = test.runtime.AddService(service)
+	s().NoError(err)
+
+	got, err := test.runtime.serviceConfig("extra-service")
+	s().NoError(err)
+	s().Equal("echo extra", got.StartCommand)
+
+	err = test.runtime.RemoveService("extra-service")
+	s().NoError(err)
+
+	_, err = test.runtime.serviceConfig("extra-service")
 	s().Error(err)
 
-	// trying with the custom source that doesn't exist
-	_, err = NewDep(test.url, localSrcPath, "")
+	err = test.runtime.RemoveService("missing")
 	s().Error(err)
 
-	// with the custom local source path it must be successful
-	err = path.MakeDir(localSrcPath)
+	err = test.runtime.AddService(config.Service{
+		Name:         "plain-service",
+		StartCommand: "echo plain",
+	})
 	s().NoError(err)
-	goMod := filepath.Join(localSrcPath, "go.mod")
-	goModFile, err := os.Create(goMod)
-	s().NoError(err)
-	err = goModFile.Close()
-	s().NoError(err)
-
-	dep, err = NewDep(test.url, localSrcPath, "")
-	s().NoError(err)
-	s().NotZero(len(dep.LocalUrl()))
-	s().Zero(dep.binPath)
-
-	// new dep with the custom binary
-	exist, err := path.DirExist(test.localTestDir)
-	s().NoError(err)
-	s().True(exist)
-	localBin := path.BinPath(filepath.Join(test.localTestDir, "test-manager", "bin"), "test")
-	exist, err = path.FileExist(localBin)
-	s().NoError(err)
-	s().True(exist)
-
-	dep, err = NewDep(test.url, "", localBin)
-	s().NoError(err)
-	s().Zero(len(dep.LocalUrl()))
-	s().Equal(localBin, dep.binPath)
-
-	// clean out the parameters
-	err = os.RemoveAll(localSrcPath)
-	s().NoError(err)
+	err = test.runtime.RemoveService("plain-service")
+	s().Error(err)
 }
 
 // Test_20_Run runs the given binary.
@@ -134,57 +169,46 @@ func (test *TestDepManagerSuite) Test_20_Run() {
 
 	localBin := path.BinPath(filepath.Join(test.localTestDir, "test-manager", "bin"), "test")
 	invalidBin := path.BinPath(filepath.Join(test.localTestDir, "test-manager", "bin"), "non_existing")
+	test.setServiceStartCommand(test.id, localBin)
 
-	dep, err := NewDep(test.url, "", localBin)
-	s().NoError(err)
-
-	// no running files
-	_, ok := test.runtime.runningDeps[test.id]
+	_, ok := test.runtime.runningProcesses[test.id+"1"]
 	s().False(ok)
 
 	// running nil values must exist
 	var depRuntime *Runtime
-	err = depRuntime.Run(dep, test.id, test.parent)
+	_, err := depRuntime.StartService(test.id, test.parent)
 	s().Error(err)
 
-	err = test.runtime.Run(nil, test.id, test.parent)
-	s().Error(err) // missing dep
-	err = test.runtime.Run(dep, "", test.parent)
-	s().Error(err) // missing id
-	err = test.runtime.Run(dep, test.id, nil)
+	_, err = test.runtime.StartService("", test.parent)
+	s().Error(err) // missing service name
+	_, err = test.runtime.StartService(test.id, nil)
 	s().Error(err) // missing parent
 
-	noBinDep, err := NewDep(test.url, "", "")
-	s().NoError(err)
-	err = test.runtime.Run(noBinDep, test.id, test.parent)
-	s().Error(err) // no binary
+	test.setServiceStartCommand("no-command", "")
+	_, err = test.runtime.StartService("no-command", test.parent)
+	s().Error(err) // no start command
 
 	// the binary doesn't exist
-	invalidDep, err := NewDep(test.url, "", localBin)
-	s().NoError(err)
-	invalidDep.binPath = invalidBin
-	err = test.runtime.Run(invalidDep, test.id, test.parent)
+	test.setServiceStartCommand(test.id, invalidBin)
+	_, err = test.runtime.StartService(test.id, test.parent)
 	s().Error(err) // no binary
 
 	// Let's run it, it should exit immediately
-	err = test.runtime.Run(dep, test.id, test.parent)
+	test.setServiceStartCommand(test.id, localBin)
+	id, err := test.runtime.StartService(test.id, test.parent)
 	s().NoError(err)
 
-	_, ok = test.runtime.runningDeps[test.id]
+	_, ok = test.runtime.runningProcesses[id]
 	s().True(ok)
 
-	// trying to run again must fail
-	err = test.runtime.Run(dep, test.id, test.parent)
-	s().Error(err)
-
 	// clean out
-	_, ok = test.runtime.runningDeps[test.id]
+	_, ok = test.runtime.runningProcesses[id]
 	if ok {
-		onStop := test.runtime.OnStop(test.id)
+		onStop := test.runtime.OnStop(id)
 		err = <-onStop
 		s().NoError(err)
 
-		_, running := test.runtime.runningDeps[test.id]
+		_, running := test.runtime.runningProcesses[id]
 		s().False(running)
 	}
 }
@@ -195,31 +219,24 @@ func (test *TestDepManagerSuite) Test_21_RunError() {
 	s := test.Require
 
 	localBin := path.BinPath(filepath.Join(test.localTestDir, "with-error", "bin"), "test")
-
-	dep, err := NewDep(test.url, "", localBin)
-	s().NoError(err)
-	dep.SetBranch("error-exit") // this branch intentionally exits the program with an error.
-
-	// First, make sure that developer built the binary
-	exist := test.runtime.binExist(dep)
-	s().True(exist)
+	test.setServiceStartCommand(test.id, localBin)
 
 	// Let's run it
-	err = test.runtime.Run(dep, test.id, test.parent)
+	id, err := test.runtime.StartService(test.id, test.parent)
 	s().NoError(err)
 
 	// make sure that it exists
-	_, ok := test.runtime.runningDeps[test.id]
+	_, ok := test.runtime.runningProcesses[id]
 	s().True(ok)
 
-	stopChan := test.runtime.OnStop(test.id)
+	stopChan := test.runtime.OnStop(id)
 	s().NotNil(stopChan)
 
 	err = <-stopChan
 	s().Error(err)
 
 	// the closed service is removed from Runtime
-	_, ok = test.runtime.runningDeps[test.id]
+	_, ok = test.runtime.runningProcesses[id]
 	s().False(ok)
 
 }
@@ -235,30 +252,27 @@ func (test *TestDepManagerSuite) Test_22_Running() {
 		TargetType: zmq4.REP,
 	}
 	localBin := path.BinPath(filepath.Join(test.localTestDir, "server", "bin"), "test")
-
-	dep, err := NewDep(test.url, "", localBin)
-	s().NoError(err)
-	dep.SetBranch("server") // the sample server is written in this branch.
+	test.setServiceStartCommand(test.id, localBin)
 
 	// First, install the manager
 	// Let's run it
-	err = test.runtime.Run(dep, test.id, test.parent)
+	id, err := test.runtime.StartService(test.id, test.parent)
 	s().NoError(err)
-	s().NotNil(test.runtime.runningDeps[test.id]) // cmd == nil indicates that the program was closed
+	s().NotNil(test.runtime.runningProcesses[id]) // cmd == nil indicates that the program was closed
 
 	// Check is the service running
-	running, err := test.runtime.Running(client)
+	running, err := test.runtime.IsServiceRunning(client)
 	s().NoError(err)
 	s().True(running)
 
 	// service is running two seconds. after that running should return false
-	onStop := test.runtime.OnStop(test.id)
+	onStop := test.runtime.OnStop(id)
 	s().NotNil(onStop)
 	err = <-onStop
 	s().NoError(err)
 
-	s().Nil(test.runtime.runningDeps[test.id]) // cmd == nil indicates that the program was closed
-	running, err = test.runtime.Running(client)
+	s().Nil(test.runtime.runningProcesses[id]) // cmd == nil indicates that the program was closed
+	running, err = test.runtime.IsServiceRunning(client)
 	s().NoError(err)
 	s().False(running)
 }

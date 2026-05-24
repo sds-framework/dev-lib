@@ -4,6 +4,7 @@ package runtime
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/sds-framework/client-lib"
@@ -11,86 +12,98 @@ import (
 	config "github.com/sds-framework/config-lib"
 	"github.com/sds-framework/datatype-lib/data_type/key_value"
 	"github.com/sds-framework/datatype-lib/message"
-	"github.com/sds-framework/dev-lib/source"
+	handlerConfig "github.com/sds-framework/handler-lib/config"
 	"github.com/sds-framework/log-lib"
-	"github.com/sds-framework/os-lib/path"
 )
 
 // DefaultTimeout is the default time to wait before considering the message is not delivered.
-// Runtime.Running method uses this value before considering the socket as not running.
+// Runtime.IsServiceRunning method uses this value before considering the socket as not running.
 const DefaultTimeout = time.Second
 
-type Dep struct {
-	*source.Src
-
-	binPath string
-	cmd     *exec.Cmd
-	done    chan error // signalizes when the service finished
+type Process struct {
+	config *config.Service
+	id     string
+	cmd    *exec.Cmd
+	done   chan error // signalizes when the service finished
 }
 
 // Runtime runs, stops, and checks dependency services.
 type Runtime struct {
-	config      *config.SdsService
-	runningDeps map[string]*Dep
-	timeout     time.Duration
+	config           *config.SdsService
+	sameServices     map[string]int
+	runningProcesses map[string]*Process
+	timeout          time.Duration
 }
 
-// NewDep returns dependency parameters.
-func NewDep(url, localSrc, localBin string) (*Dep, error) {
-	src, err := source.New(url, localSrc)
+// AddService registers a service in the runtime configuration.
+func (rt *Runtime) AddService(service config.Service) error {
+	if rt == nil || rt.config == nil {
+		return fmt.Errorf("nil config")
+	}
+	if len(service.Name) == 0 {
+		return fmt.Errorf("service name is empty")
+	}
+
+	if err := rt.config.SetService(service); err != nil {
+		return fmt.Errorf("rt.config.SetService: %w", err)
+	}
+
+	return rt.config.Save()
+}
+
+// RemoveService removes a service from the runtime configuration.
+func (rt *Runtime) RemoveService(serviceName string) error {
+	if rt == nil || rt.config == nil {
+		return fmt.Errorf("nil config")
+	}
+	if len(serviceName) == 0 {
+		return fmt.Errorf("service name is empty")
+	}
+
+	running, err := rt.serviceRunning(serviceName)
 	if err != nil {
-		return nil, fmt.Errorf("source.New('%s'): %w", url, err)
+		return err
+	}
+	if running {
+		return fmt.Errorf("service('%s') is running, please stop it first", serviceName)
 	}
 
-	dep := &Dep{
-		Src: src,
+	if err := rt.config.RemoveService(serviceName); err != nil {
+		return err
 	}
 
-	if len(localBin) > 0 {
-		exist, err := path.FileExist(localBin)
-		if !exist {
-			if err != nil {
-				err = fmt.Errorf("path.FileExist(localBin='%s'): %w", localBin, err)
-			} else {
-				err = fmt.Errorf("path.FileExist(localBin='%s'): false", localBin)
-			}
-			return nil, err
-		}
-
-		dep.binPath = localBin
+	if err := rt.config.Save(); err != nil {
+		return fmt.Errorf("rt.config.Save: %w", err)
 	}
 
-	return dep, nil
+	delete(rt.sameServices, serviceName)
+	return nil
 }
 
 // New creates a dependency runtime in the Dev context.
 func New(cfg *config.SdsService) *Runtime {
 	return &Runtime{
-		config:      cfg,
-		runningDeps: make(map[string]*Dep, 0),
-		timeout:     DefaultTimeout,
+		config:           cfg,
+		sameServices:     make(map[string]int),
+		runningProcesses: make(map[string]*Process, 0),
+		timeout:          DefaultTimeout,
 	}
 }
 
-func (dep *Dep) copy() *Dep {
-	// no check against errors, as the Dep must have the valid source.
-	src, _ := source.New(dep.Url, dep.LocalUrl())
-
-	instance := &Dep{
-		Src:     src,
-		binPath: dep.binPath,
-		done:    make(chan error, 1),
+func (process *Process) copy() *Process {
+	return &Process{
+		config: process.config,
+		id:     process.id,
+		done:   make(chan error, 1),
 	}
-
-	return instance
 }
 
-// Close the dependency
-func (rt *Runtime) Close(c *clientConfig.Client) error {
+// StopService stops the dependency service.
+func (rt *Runtime) StopService(c *clientConfig.Client) error {
 	// Make sure it's running
-	running, err := rt.Running(c)
+	running, err := rt.IsServiceRunning(c)
 	if err != nil {
-		return fmt.Errorf("runtime.Running(client='%v'): %w", *c, err)
+		return fmt.Errorf("runtime.IsServiceRunning(client='%v'): %w", *c, err)
 	}
 	if !running {
 		return nil
@@ -113,9 +126,9 @@ func (rt *Runtime) Close(c *clientConfig.Client) error {
 		return fmt.Errorf("socket.Request('close'): must exist with error since service closed before replying back")
 	}
 
-	running, err = rt.Running(c)
+	running, err = rt.IsServiceRunning(c)
 	if err != nil {
-		return fmt.Errorf("socket.Request('close'): runtime.Running(client='%v'): %w", *c, err)
+		return fmt.Errorf("socket.Request('close'): runtime.IsServiceRunning(client='%v'): %w", *c, err)
 	}
 
 	if running {
@@ -130,26 +143,10 @@ func (rt *Runtime) Close(c *clientConfig.Client) error {
 	return nil
 }
 
-// binExist checks that the binary exists.
-//
-// Whether the runtime is manageable or not doesn't matter.
-func (rt *Runtime) binExist(dep *Dep) bool {
-	if rt == nil || dep == nil {
-		return false
-	}
-
-	if len(dep.binPath) == 0 {
-		return false
-	}
-
-	exist, _ := path.FileExist(dep.binPath)
-	return exist
-}
-
-// Running checks whether the given client running or not.
+// IsServiceRunning checks whether the given client running or not.
 // If the service is running on another process or on another node,
 // then that service should expose the port.
-func (rt *Runtime) Running(c *clientConfig.Client) (bool, error) {
+func (rt *Runtime) IsServiceRunning(c *clientConfig.Client) (bool, error) {
 	c.UrlFunc(clientConfig.Url)
 
 	sock, err := client.New(c)
@@ -176,22 +173,107 @@ func (rt *Runtime) Running(c *clientConfig.Client) (bool, error) {
 	return true, nil
 }
 
-// OnStop returns a signal through the channel when the dependency spawned by the Runtime stops.
-// If the dep is not existing, then it will simply return error.
+// OnStop returns a signal through the channel when the process spawned by the Runtime stops.
+// If the process is not existing, then it will simply return error.
 func (rt *Runtime) OnStop(id string) chan error {
-	dep, ok := rt.runningDeps[id]
+	process, ok := rt.runningProcesses[id]
 	if !ok {
 		return nil
 	}
 
-	if dep.cmd == nil {
+	if process.cmd == nil {
 		return nil
 	}
 
-	return dep.done
+	return process.done
 }
 
-// Run runs the binary.
+// GenerateId returns the next runtime id for a service name.
+func (rt *Runtime) GenerateId(serviceName string) (string, error) {
+	if rt == nil {
+		return "", fmt.Errorf("nil runtime")
+	}
+	if len(serviceName) == 0 {
+		return "", fmt.Errorf("service name is empty")
+	}
+	if rt.sameServices == nil {
+		rt.sameServices = make(map[string]int)
+	}
+
+	count := rt.sameServices[serviceName]
+	for {
+		count++
+		id := fmt.Sprintf("%s%d", serviceName, count)
+		if _, exists := rt.runningProcesses[id]; !exists {
+			rt.sameServices[serviceName]++
+			return id, nil
+		}
+	}
+}
+
+func (rt *Runtime) refreshServiceCount(serviceName string) {
+	count := 0
+	for _, process := range rt.runningProcesses {
+		if process != nil && process.config != nil && process.config.Name == serviceName {
+			count++
+		}
+	}
+	if count == 0 {
+		delete(rt.sameServices, serviceName)
+		return
+	}
+	rt.sameServices[serviceName] = count
+}
+
+func managerHandler(service *config.Service) (config.Handler, error) {
+	for _, handler := range service.Handlers {
+		if strings.Contains(handler.Socket.Id, "manager") {
+			return handler, nil
+		}
+	}
+
+	return config.Handler{}, fmt.Errorf("manager handler not found for service('%s')", service.Name)
+}
+
+func (rt *Runtime) serviceRunning(serviceName string) (bool, error) {
+	service, err := rt.serviceConfig(serviceName)
+	if err != nil {
+		return false, err
+	}
+
+	handler, err := managerHandler(service)
+	if err != nil {
+		return false, err
+	}
+
+	client := clientConfig.New(
+		service.Name,
+		handler.Socket.Id,
+		uint64(handler.Socket.Port),
+		handlerConfig.SocketType(handlerConfig.HandlerType(handler.Type)),
+	)
+
+	return rt.IsServiceRunning(client)
+}
+
+func (rt *Runtime) serviceConfig(serviceName string) (*config.Service, error) {
+	if rt == nil || rt.config == nil {
+		return nil, fmt.Errorf("nil config")
+	}
+	if len(serviceName) == 0 {
+		return nil, fmt.Errorf("service name is empty")
+	}
+
+	for i := range rt.config.Services {
+		if rt.config.Services[i].Name == serviceName {
+			return &rt.config.Services[i], nil
+		}
+	}
+
+	return nil, fmt.Errorf("service('%s') not found", serviceName)
+}
+
+// StartService runs the service start command.
 // If it fails to run, then it will return an error.
 //
 // Note that, services can crash during the initialization.
@@ -200,80 +282,97 @@ func (rt *Runtime) OnStop(id string) chan error {
 // If a parent is given, it's passed as ParentFlag.
 // Todo, move all Flags from service-lib to config-lig.
 // Todo, use the ParentFlag from the config lig
-func (rt *Runtime) Run(dep *Dep, id string, optionalParent ...*clientConfig.Client) error {
-	if rt == nil || dep == nil || len(id) == 0 {
-		return fmt.Errorf("nil or no id")
+func (rt *Runtime) StartService(serviceName string, optionalParent ...*clientConfig.Client) (string, error) {
+	if rt == nil {
+		return "", fmt.Errorf("nil runtime")
 	}
+	serviceConfig, err := rt.serviceConfig(serviceName)
+	if err != nil {
+		return "", err
+	}
+	process := &Process{config: serviceConfig}
+
 	if len(optionalParent) > 1 {
-		return fmt.Errorf("too many optional parameters, either no parameter or 1 parameter required")
+		return "", fmt.Errorf("too many optional parameters, either no parameter or 1 parameter required")
+	}
+	if len(optionalParent) == 1 && optionalParent[0] == nil {
+		return "", fmt.Errorf("nil parent")
 	}
 
-	if len(dep.binPath) == 0 {
-		return fmt.Errorf("no binary")
+	if len(process.config.StartCommand) == 0 {
+		return "", fmt.Errorf("no start command")
 	}
 
-	_, ok := rt.runningDeps[id]
-	if ok {
-		return fmt.Errorf("the dep with id '%s' already running", id)
+	id, err := rt.GenerateId(process.config.Name)
+	if err != nil {
+		return "", fmt.Errorf("rt.GenerateId('%s'): %w", process.config.Name, err)
 	}
+	process.id = id
 
-	ok = rt.binExist(dep)
-	if !ok {
-		return fmt.Errorf("no binary")
-	}
-
-	configFlag := fmt.Sprintf("--url=%s", dep.Url)
 	idFlag := fmt.Sprintf("--id=%s", id)
 
-	args := make([]string, 2, 3)
-	args[0] = configFlag
-	args[1] = idFlag
+	args := []string{idFlag}
 
 	if len(optionalParent) == 1 {
 		parentKv, err := key_value.NewFromInterface(optionalParent[0])
 		if err != nil {
-			return fmt.Errorf("optionalParent: key_value.NewFromInterface(parent='%v'): %w", optionalParent[0], err)
+			rt.refreshServiceCount(process.config.Name)
+			return "", fmt.Errorf("optionalParent: key_value.NewFromInterface(parent='%v'): %w", optionalParent[0], err)
 		}
 		parentFlag := fmt.Sprintf("--parent=%s", parentKv.String())
 		args = append(args, parentFlag)
 	}
 
-	instance := dep.copy()
+	commandArgs := strings.Fields(process.config.StartCommand)
+	if len(commandArgs) == 0 {
+		rt.refreshServiceCount(process.config.Name)
+		return "", fmt.Errorf("no start command")
+	}
 
-	rt.runningDeps[id] = instance
+	instance := process.copy()
+
+	rt.runningProcesses[id] = instance
 
 	logger, err := log.New(id, false)
 	if err != nil {
-		return fmt.Errorf("log.New('%s'): %w", id, err)
+		delete(rt.runningProcesses, id)
+		rt.refreshServiceCount(process.config.Name)
+		return "", fmt.Errorf("log.New('%s'): %w", id, err)
 	}
 	errLogger, err := log.New(id+"Err", false)
 	if err != nil {
-		return fmt.Errorf("log.New('%sErr'): %w", id, err)
+		delete(rt.runningProcesses, id)
+		rt.refreshServiceCount(process.config.Name)
+		return "", fmt.Errorf("log.New('%sErr'): %w", id, err)
 	}
 
-	cmd := exec.Command(dep.binPath, args...)
+	cmd := exec.Command(commandArgs[0], append(commandArgs[1:], args...)...)
 	cmd.Stdout = logger
 	cmd.Stderr = errLogger
 	err = cmd.Start()
 	if err != nil {
-		return fmt.Errorf("cmd.Start: %w", err)
+		delete(rt.runningProcesses, id)
+		rt.refreshServiceCount(process.config.Name)
+		return "", fmt.Errorf("cmd.Start: %w", err)
 	}
 
 	instance.cmd = cmd
 	rt.wait(id)
 
-	return nil
+	return id, nil
 }
 
 // The wait is invoked if the spawned dependency stops.
 // The dependencies are running asynchronously.
-// In order to call this function, you must use the Runtime.Close() method.
+// In order to call this function, you must use the Runtime.StopService() method.
 // If the Close signal was sent to the spawned child, then
 // this method will be called automatically by the operating system.
 func (rt *Runtime) wait(id string) {
 	go func() {
-		err := rt.runningDeps[id].cmd.Wait() // it can return an error
-		rt.runningDeps[id].done <- err
-		delete(rt.runningDeps, id)
+		process := rt.runningProcesses[id]
+		err := process.cmd.Wait() // it can return an error
+		process.done <- err
+		delete(rt.runningProcesses, id)
+		rt.refreshServiceCount(process.config.Name)
 	}()
 }

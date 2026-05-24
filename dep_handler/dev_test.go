@@ -85,7 +85,7 @@ func (test *TestDepHandlerSuite) TearDownTest() {
 }
 
 //
-//// Test_13_Start tests DepRunning, RunDep and CloseDep commands.
+//// Test_13_Start tests IsServiceRunning, StartService and StopService commands.
 //func (test *TestDepHandlerSuite) Test_13_Start() {
 //	s := test.Suite.Require
 //
@@ -102,7 +102,7 @@ func (test *TestDepHandlerSuite) TearDownTest() {
 //
 //	// Let's run it
 //	runReq := message.Request{
-//		Command: RunDep,
+//		Command: StartService,
 //		Parameters: key_value.New().
 //			Set("parent", test.parent).
 //			Set("url", src.Url).
@@ -117,7 +117,7 @@ func (test *TestDepHandlerSuite) TearDownTest() {
 //
 //	// check that service is running
 //	runningReq := message.Request{
-//		Command: DepRunning,
+//		Command: IsServiceRunning,
 //		Parameters: key_value.New().
 //			Set("dep", depClient),
 //	}
@@ -130,7 +130,7 @@ func (test *TestDepHandlerSuite) TearDownTest() {
 //
 //	// Close the service
 //	closeReq := message.Request{
-//		Command: CloseDep,
+//		Command: StopService,
 //		Parameters: key_value.New().
 //			Set("dep", depClient),
 //	}
