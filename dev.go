@@ -20,20 +20,12 @@ type Context struct {
 }
 
 // New creates a developer context and loads it with the dev configuration.
-func New(configPath ...string) (*Context, error) {
+func New(configPath string) (*Context, error) {
 	ctx := &Context{}
 
-	cfgPath := ""
-	if len(configPath) > 1 {
-		return nil, fmt.Errorf("expected at most one config path")
-	}
-	if len(configPath) == 1 {
-		cfgPath = configPath[0]
-	}
-
-	appConfig, err := config.Load(cfgPath)
+	appConfig, err := config.Load(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("config.Load('%s'): %w", cfgPath, err)
+		return nil, fmt.Errorf("config.Load('%s'): %w", configPath, err)
 	}
 	ctx.Config = appConfig
 
