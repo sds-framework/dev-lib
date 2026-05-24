@@ -1,5 +1,5 @@
-// Package dep_handler creates a thread that manages the dependencies
-package dep_handler
+// Package runtime contains the dependency runtime for the dev context.
+package runtime
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 	config "github.com/sds-framework/config-lib"
 	"github.com/sds-framework/datatype-lib/data_type/key_value"
 	"github.com/sds-framework/datatype-lib/message"
-	"github.com/sds-framework/dev-lib/runtime"
 	"github.com/sds-framework/handler-lib/base"
 	handlerConfig "github.com/sds-framework/handler-lib/config"
 	"github.com/sds-framework/handler-lib/replier"
@@ -25,18 +24,18 @@ const (
 )
 
 // Handler acts as the router from other app processes to the runtime.
-type DepHandler struct {
-	handler base.Interface    // Receive commands
-	runtime runtime.Interface // Route to the functions from runtime
+type Handler struct {
+	handler base.Interface // Receive commands
+	runtime Interface      // Route to the functions from runtime
 }
 
-// ServiceConfig returns the socket configuration of the handler
+// ServiceConfig returns the socket configuration of the handler.
 func ServiceConfig() *handlerConfig.Handler {
 	return handlerConfig.NewInternalHandler(handlerConfig.ReplierType, Category, Category)
 }
 
-// New dep handler returned
-func New(cfg *config.SdsService) (*DepHandler, error) {
+// NewHandler returns a dependency runtime handler.
+func NewHandler(cfg *config.SdsService) (*Handler, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("nil config")
 	}
@@ -54,8 +53,8 @@ func New(cfg *config.SdsService) (*DepHandler, error) {
 		return nil, fmt.Errorf("handler.SetLogger: %w", err)
 	}
 
-	return &DepHandler{
-		runtime: runtime.New(cfg),
+	return &Handler{
+		runtime: New(cfg),
 		handler: handler,
 	}, nil
 }
@@ -64,8 +63,8 @@ func New(cfg *config.SdsService) (*DepHandler, error) {
 // Requires:
 //   - 'dep' of the clientConfig.Client.
 //
-// Returns 'running' boolean result
-func (h *DepHandler) onIsServiceRunning(req message.RequestInterface) message.ReplyInterface {
+// Returns 'running' boolean result.
+func (h *Handler) onIsServiceRunning(req message.RequestInterface) message.ReplyInterface {
 	kv, err := req.RouteParameters().NestedValue("dep")
 	if err != nil {
 		return req.Fail(fmt.Sprintf("req.Parameters.GetKeyValue('dep'): %v", err))
@@ -95,7 +94,7 @@ func (h *DepHandler) onIsServiceRunning(req message.RequestInterface) message.Re
 //
 // Returns nothing.
 // todo make it publish the result through publisher, so user won't wait for the result.
-func (h *DepHandler) onStartService(req message.RequestInterface) message.ReplyInterface {
+func (h *Handler) onStartService(req message.RequestInterface) message.ReplyInterface {
 	kv, err := req.RouteParameters().NestedValue("parent")
 	if err != nil {
 		return req.Fail(fmt.Sprintf("req.Parameters.GetKeyValue('parent'): %v", err))
@@ -127,7 +126,7 @@ func (h *DepHandler) onStartService(req message.RequestInterface) message.ReplyI
 
 // onAddService registers a service in the runtime configuration.
 // Requires 'service' of the config.Service type.
-func (h *DepHandler) onAddService(req message.RequestInterface) message.ReplyInterface {
+func (h *Handler) onAddService(req message.RequestInterface) message.ReplyInterface {
 	kv, err := req.RouteParameters().NestedValue("service")
 	if err != nil {
 		return req.Fail(fmt.Sprintf("req.Parameters.GetKeyValue('service'): %v", err))
@@ -149,7 +148,7 @@ func (h *DepHandler) onAddService(req message.RequestInterface) message.ReplyInt
 
 // onRemoveService removes a service from the runtime configuration.
 // Requires 'service' string parameter with the service name.
-func (h *DepHandler) onRemoveService(req message.RequestInterface) message.ReplyInterface {
+func (h *Handler) onRemoveService(req message.RequestInterface) message.ReplyInterface {
 	serviceName, err := req.RouteParameters().StringValue("service")
 	if err != nil {
 		return req.Fail(fmt.Sprintf("req.Parameters.GetString('service'): %v", err))
@@ -168,7 +167,7 @@ func (h *DepHandler) onRemoveService(req message.RequestInterface) message.Reply
 // Returns nothing.
 //
 // Todo make it publish the result through publisher, so user won't wait for the result.
-func (h *DepHandler) onStopService(req message.RequestInterface) message.ReplyInterface {
+func (h *Handler) onStopService(req message.RequestInterface) message.ReplyInterface {
 	kv, err := req.RouteParameters().NestedValue("dep")
 	if err != nil {
 		return req.Fail(fmt.Sprintf("req.Parameters.GetKeyValue('dep'): %v", err))
@@ -190,8 +189,8 @@ func (h *DepHandler) onStopService(req message.RequestInterface) message.ReplyIn
 	return req.Ok(key_value.New())
 }
 
-// Start the dependency handler with the available operations.
-func (h *DepHandler) Start() error {
+// Start starts the dependency handler with the available operations.
+func (h *Handler) Start() error {
 	if err := h.handler.Route(IsServiceRunning, h.onIsServiceRunning); err != nil {
 		return fmt.Errorf("h.handler.Route('%s'): %v", IsServiceRunning, err)
 	}

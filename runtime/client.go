@@ -1,4 +1,4 @@
-package dep_client
+package runtime
 
 import (
 	"fmt"
@@ -9,7 +9,6 @@ import (
 	config "github.com/sds-framework/config-lib"
 	"github.com/sds-framework/datatype-lib/data_type/key_value"
 	"github.com/sds-framework/datatype-lib/message"
-	"github.com/sds-framework/dev-lib/dep_handler"
 	handlerConfig "github.com/sds-framework/handler-lib/config"
 )
 
@@ -17,7 +16,7 @@ type Client struct {
 	socket *client.Socket
 }
 
-type Interface interface {
+type ClientInterface interface {
 	Close() error
 	Timeout(duration time.Duration)
 	Attempt(attempt uint8)
@@ -29,8 +28,8 @@ type Interface interface {
 	IsServiceRunning(depClient *clientConfig.Client) (bool, error)
 }
 
-func New() (*Client, error) {
-	configHandler := dep_handler.ServiceConfig()
+func NewClient() (*Client, error) {
+	configHandler := ServiceConfig()
 	socketType := handlerConfig.SocketType(configHandler.Type)
 	c := clientConfig.New("", configHandler.Id, configHandler.Port, socketType).
 		UrlFunc(clientConfig.Url)
@@ -43,12 +42,12 @@ func New() (*Client, error) {
 	return &Client{socket: socket}, nil
 }
 
-// Timeout of the client socket
+// Timeout of the client socket.
 func (c *Client) Timeout(duration time.Duration) {
 	c.socket.Timeout(duration)
 }
 
-// Attempt amount for requests
+// Attempt amount for requests.
 func (c *Client) Attempt(attempt uint8) {
 	c.socket.Attempt(attempt)
 }
@@ -60,7 +59,7 @@ func (c *Client) Close() error {
 // StopService stops the running dependency service.
 func (c *Client) StopService(depClient *clientConfig.Client) error {
 	req := message.Request{
-		Command: dep_handler.StopService,
+		Command: StopService,
 		Parameters: key_value.New().
 			Set("dep", depClient),
 	}
@@ -75,7 +74,7 @@ func (c *Client) StopService(depClient *clientConfig.Client) error {
 
 	reply, err := c.socket.Request(&req)
 	if err != nil {
-		return fmt.Errorf("socket.Submit('%s'): %w", dep_handler.StopService, err)
+		return fmt.Errorf("socket.Submit('%s'): %w", StopService, err)
 	}
 
 	if !reply.IsOK() {
@@ -88,14 +87,14 @@ func (c *Client) StopService(depClient *clientConfig.Client) error {
 // AddService registers a service in the runtime configuration.
 func (c *Client) AddService(service config.Service) error {
 	req := message.Request{
-		Command: dep_handler.AddService,
+		Command: AddService,
 		Parameters: key_value.New().
 			Set("service", service),
 	}
 
 	reply, err := c.socket.Request(&req)
 	if err != nil {
-		return fmt.Errorf("socket.Submit('%s'): %w", dep_handler.AddService, err)
+		return fmt.Errorf("socket.Submit('%s'): %w", AddService, err)
 	}
 
 	if !reply.IsOK() {
@@ -108,14 +107,14 @@ func (c *Client) AddService(service config.Service) error {
 // RemoveService removes a service from the runtime configuration.
 func (c *Client) RemoveService(serviceName string) error {
 	req := message.Request{
-		Command: dep_handler.RemoveService,
+		Command: RemoveService,
 		Parameters: key_value.New().
 			Set("service", serviceName),
 	}
 
 	reply, err := c.socket.Request(&req)
 	if err != nil {
-		return fmt.Errorf("socket.Submit('%s'): %w", dep_handler.RemoveService, err)
+		return fmt.Errorf("socket.Submit('%s'): %w", RemoveService, err)
 	}
 
 	if !reply.IsOK() {
@@ -128,7 +127,7 @@ func (c *Client) RemoveService(serviceName string) error {
 // StartService starts the dependency service and returns the generated runtime id.
 func (c *Client) StartService(serviceName string, parent *clientConfig.Client) (string, error) {
 	req := message.Request{
-		Command: dep_handler.StartService,
+		Command: StartService,
 		Parameters: key_value.New().
 			Set("parent", parent).
 			Set("service", serviceName),
@@ -136,7 +135,7 @@ func (c *Client) StartService(serviceName string, parent *clientConfig.Client) (
 
 	reply, err := c.socket.Request(&req)
 	if err != nil {
-		return "", fmt.Errorf("socket.Submit('%s'): %w", dep_handler.StartService, err)
+		return "", fmt.Errorf("socket.Submit('%s'): %w", StartService, err)
 	}
 
 	if !reply.IsOK() {
@@ -154,14 +153,14 @@ func (c *Client) StartService(serviceName string, parent *clientConfig.Client) (
 // IsServiceRunning checks is the service running or not.
 func (c *Client) IsServiceRunning(depClient *clientConfig.Client) (bool, error) {
 	req := message.Request{
-		Command: dep_handler.IsServiceRunning,
+		Command: IsServiceRunning,
 		Parameters: key_value.New().
 			Set("dep", depClient),
 	}
 
 	reply, err := c.socket.Request(&req)
 	if err != nil {
-		return false, fmt.Errorf("socket.Request('%s'): %w", dep_handler.IsServiceRunning, err)
+		return false, fmt.Errorf("socket.Request('%s'): %w", IsServiceRunning, err)
 	}
 
 	if !reply.IsOK() {

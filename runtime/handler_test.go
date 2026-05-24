@@ -1,12 +1,13 @@
-package dep_client
+package runtime
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/sds-framework/client-lib"
 	clientConfig "github.com/sds-framework/client-lib/config"
 	config "github.com/sds-framework/config-lib"
-	"github.com/sds-framework/dev-lib/dep_handler"
 	handlerConfig "github.com/sds-framework/handler-lib/config"
 	"github.com/sds-framework/handler-lib/manager_client"
 	"github.com/sds-framework/log-lib"
@@ -17,35 +18,35 @@ import (
 // Define the suite, and absorb the built-in basic suite
 // functionality from testify - including a T() method which
 // returns the current testing orchestra
-type TestDepClientSuite struct {
+type TestHandlerSuite struct {
 	suite.Suite
 
 	logger            *log.Logger
-	depHandler        *dep_handler.DepHandler // the manager to test
+	depHandler        *Handler // the manager to test
 	depHandlerManager manager_client.Interface
 	url               string               // dependency source code
 	id                string               // the id of the dependency
 	parent            *clientConfig.Client // the info about the service to which dependency should connect
 
-	client *Client
+	client *client.Socket // imitating the service
 }
 
 // Make sure that Account is set to five
 // before each test
-func (test *TestDepClientSuite) SetupTest() {
+func (test *TestHandlerSuite) SetupTest() {
 	s := test.Suite.Require
 
 	logger, _ := log.New("test", false)
 	test.logger = logger
 
 	var err error
-	test.depHandler, err = dep_handler.New(&config.SdsService{})
+	test.depHandler, err = NewHandler(&config.SdsService{})
 	s().NoError(err)
 
 	// Start the handler
 	s().NoError(test.depHandler.Start())
 
-	test.depHandlerManager, err = manager_client.New(dep_handler.ServiceConfig())
+	test.depHandlerManager, err = manager_client.New(ServiceConfig())
 	s().NoError(err)
 
 	// wait a bit for closing
@@ -62,7 +63,9 @@ func (test *TestDepClientSuite) SetupTest() {
 		TargetType: handlerConfig.SocketType(handlerConfig.ReplierType),
 	}
 
-	socket, err := New()
+	config := ServiceConfig()
+	socketType := handlerConfig.SocketType(config.Type)
+	socket, err := client.NewRaw(socketType, fmt.Sprintf("inproc://%s", config.Id))
 	s().NoError(err)
 
 	test.client = socket
@@ -70,7 +73,7 @@ func (test *TestDepClientSuite) SetupTest() {
 	test.client.Attempt(1)
 }
 
-func (test *TestDepClientSuite) TearDownTest() {
+func (test *TestHandlerSuite) TearDownTest() {
 	s := test.Suite.Require
 
 	s().NoError(test.client.Close())
@@ -81,8 +84,9 @@ func (test *TestDepClientSuite) TearDownTest() {
 	time.Sleep(time.Millisecond * 100)
 }
 
+//
 //// Test_13_Start tests IsServiceRunning, StartService and StopService commands.
-//func (test *TestDepClientSuite) Test_13_Start() {
+//func (test *TestHandlerSuite) Test_13_Start() {
 //	s := test.Suite.Require
 //
 //	depClient := &clientConfig.Client{
@@ -96,41 +100,59 @@ func (test *TestDepClientSuite) TearDownTest() {
 //	s().NoError(err)
 //	src.SetBranch("server") // the sample server is written in this branch.
 //
-//	// Let's run the dependency
-//	test.logger.Info("request to run the dependency", "srcUrl", src.Url, "id", test.id)
-//	id, err := test.client.StartService(src.Url, test.parent)
+//	// Let's run it
+//	runReq := message.Request{
+//		Command: StartService,
+//		Parameters: key_value.New().
+//			Set("parent", test.parent).
+//			Set("url", src.Url).
+//			Set("id", test.id),
+//	}
+//	rep, err = test.client.Request(&runReq)
 //	s().NoError(err)
+//	s().True(rep.IsOK())
 //
 //	// Just wait a bit for initialization of the service
 //	time.Sleep(time.Millisecond * 100)
 //
 //	// check that service is running
-//	test.logger.Info("check dependency status")
-//	running, err := test.client.IsServiceRunning(depClient)
+//	runningReq := message.Request{
+//		Command: IsServiceRunning,
+//		Parameters: key_value.New().
+//			Set("dep", depClient),
+//	}
+//	running, err := test.client.Request(&runningReq)
 //	s().NoError(err)
-//	s().True(running)
-//	test.logger.Info("status returned from dependency manager", "running", running, "error", err)
-//
-//	// StopService the service
-//	test.logger.Info("send a signal to close dependency")
-//
-//	err = test.client.StopService(depClient)
+//	s().True(running.IsOK())
+//	result, err := running.ReplyParameters().BoolValue("running")
 //	s().NoError(err)
+//	s().True(result)
+//
+//	// Close the service
+//	closeReq := message.Request{
+//		Command: StopService,
+//		Parameters: key_value.New().
+//			Set("dep", depClient),
+//	}
+//	running, err = test.client.Request(&closeReq)
+//	s().NoError(err)
+//	s().True(running.IsOK())
 //
 //	// Wait a bit for closing the source process
 //	time.Sleep(time.Millisecond * 100)
 //
 //	// Checking for a running source after it was closed must fail
-//	test.logger.Info("check again the dependency status")
-//	running, err = test.client.IsServiceRunning(depClient)
-//	test.logger.Info("closed dependency status returned", "running", running, "error", err)
+//	running, err = test.client.Request(&runningReq)
 //	s().NoError(err)
-//	s().False(running)
+//	s().True(running.IsOK())
+//	result, err = running.ReplyParameters().BoolValue("running")
+//	s().NoError(err)
+//	s().False(result)
 //
 //}
 
 // In order for 'go test' to run this suite, we need to create
 // a normal test function and pass our suite to suite.Run
-func TestDepClient(t *testing.T) {
-	suite.Run(t, new(TestDepClientSuite))
+func TestHandler(t *testing.T) {
+	suite.Run(t, new(TestHandlerSuite))
 }

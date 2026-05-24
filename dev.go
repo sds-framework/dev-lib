@@ -5,15 +5,14 @@ import (
 	"fmt"
 
 	config "github.com/sds-framework/config-lib"
-	"github.com/sds-framework/dev-lib/dep_client"
-	"github.com/sds-framework/dev-lib/dep_handler"
+	"github.com/sds-framework/dev-lib/runtime"
 )
 
 // A Context handles the config of the contexts
 type Context struct {
 	Config         config.SdsService
-	runtimeHandler *dep_handler.DepHandler
-	runtimeClient  *dep_client.Client
+	runtimeHandler *runtime.Handler
+	runtimeClient  *runtime.Client
 }
 
 // New creates a developer context and loads it with the dev configuration.
@@ -29,7 +28,7 @@ func New(configPath string) (*Context, error) {
 	return ctx, nil
 }
 
-func (ctx *Context) Runtime() dep_client.Interface {
+func (ctx *Context) Runtime() runtime.ClientInterface {
 	return ctx.runtimeClient
 }
 
@@ -40,9 +39,9 @@ func (ctx *Context) StartRuntimeHandler() error {
 	}
 
 	var err error
-	ctx.runtimeHandler, err = dep_handler.New(&ctx.Config)
+	ctx.runtimeHandler, err = runtime.NewHandler(&ctx.Config)
 	if err != nil {
-		return fmt.Errorf("dep_handler.New: %w", err)
+		return fmt.Errorf("runtime.NewHandler: %w", err)
 	}
 
 	err = ctx.runtimeHandler.Start()
@@ -50,9 +49,9 @@ func (ctx *Context) StartRuntimeHandler() error {
 		return fmt.Errorf("runtimeHandler: %w", err)
 	}
 
-	runtimeAccess, err := dep_client.New()
+	runtimeAccess, err := runtime.NewClient()
 	if err != nil {
-		return fmt.Errorf("dep_client.New: %w", err)
+		return fmt.Errorf("runtime.NewClient: %w", err)
 	}
 
 	ctx.runtimeClient = runtimeAccess

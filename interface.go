@@ -1,8 +1,8 @@
 package context
 
-import "github.com/sds-framework/dev-lib/dep_client"
+import "github.com/sds-framework/dev-lib/runtime"
 
 type Interface interface {
 	StartRuntimeHandler() error
-	Runtime() dep_client.Interface
+	Runtime() runtime.ClientInterface
 }
