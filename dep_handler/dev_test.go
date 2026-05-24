@@ -99,56 +99,21 @@ func (test *TestDepHandlerSuite) TearDownTest() {
 	time.Sleep(time.Millisecond * 100)
 }
 
-// Test_10_Installed checks DepInstalled.
-func (test *TestDepHandlerSuite) Test_10_Installed() {
-	s := test.Suite.Require
-
-	req := message.Request{
-		Command:    DepInstalled,
-		Parameters: key_value.New().Set("url", test.url),
-	}
-	rep, err := test.client.Request(&req)
-	s().NoError(err)
-	s().True(rep.IsOK())
-	res, err := rep.ReplyParameters().BoolValue("installed")
-	s().NoError(err)
-	s().False(res)
-}
-
 // Test_11_Uninstall deletes the dependency binary and source code when present.
 func (test *TestDepHandlerSuite) Test_11_Uninstall() {
 	s := test.Suite.Require
-
-	req := message.Request{
-		Command:    DepInstalled,
-		Parameters: key_value.New().Set("url", test.url),
-	}
-	rep, err := test.client.Request(&req)
-	s().NoError(err)
-	s().True(rep.IsOK())
-	res, err := rep.ReplyParameters().BoolValue("installed")
-	s().NoError(err)
-	s().False(res)
 
 	// Uninstall
 	uninstallReq := message.Request{
 		Command:    UninstallDep,
 		Parameters: key_value.New().Set("url", test.url),
 	}
-	rep, err = test.client.Request(&uninstallReq)
+	rep, err := test.client.Request(&uninstallReq)
 	s().NoError(err)
 	s().True(rep.IsOK())
 
 	// wait a bit for effect
 	time.Sleep(time.Millisecond * 100)
-
-	// After uninstallation, we should not have the binary
-	rep, err = test.client.Request(&req)
-	s().NoError(err)
-	s().True(rep.IsOK())
-	res, err = rep.ReplyParameters().BoolValue("installed")
-	s().NoError(err)
-	s().False(res)
 }
 
 //

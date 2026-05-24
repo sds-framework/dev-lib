@@ -16,7 +16,6 @@ import (
 
 const (
 	Category     = "dep_handler"   // handler category
-	DepInstalled = "dep-installed" // the command to check is dependency installed
 	DepRunning   = "dep-running"   // the command to check is dependency running
 	RunDep       = "run-dep"       // the command to run the dependency
 	UninstallDep = "uninstall-dep" // the command to remove the dependency binary. if possible, then remove the source code as well.
@@ -52,31 +51,6 @@ func New(manager dep_manager.Interface) (*DepHandler, error) {
 		manager: manager,
 		handler: handler,
 	}, nil
-}
-
-// onDepInstalled checks whether the dependency installed or not.
-// Requires:
-//   - 'url' string
-//   - 'local_bin' string, optionally
-//
-// Returns 'installed' boolean parameter
-func (h *DepHandler) onDepInstalled(req message.RequestInterface) message.ReplyInterface {
-	url, err := req.RouteParameters().StringValue("url")
-	if err != nil {
-		return req.Fail(fmt.Sprintf("req.Parameters.GetString('url'): %v", err))
-	}
-	// optionally can pass a localBin
-	optionalLocalBin, _ := req.RouteParameters().StringValue("local_bin")
-
-	dep, err := dep_manager.NewDep(url, "", optionalLocalBin)
-	if err != nil {
-		return req.Fail(fmt.Sprintf("dep_manager.NewDep('%s', '', '%s'): %v", url, optionalLocalBin, err))
-	}
-	h.manager.Lint(dep)
-
-	installed := h.manager.Installed(dep)
-	params := key_value.New().Set("installed", installed)
-	return req.Ok(params)
 }
 
 // onDepRunning checks whether the dependency is running or not.
@@ -219,9 +193,6 @@ func (h *DepHandler) onCloseDep(req message.RequestInterface) message.ReplyInter
 
 // Start the dependency handler with the available operations.
 func (h *DepHandler) Start() error {
-	if err := h.handler.Route(DepInstalled, h.onDepInstalled); err != nil {
-		return fmt.Errorf("h.handler.Route('%s'): %v", DepInstalled, err)
-	}
 	if err := h.handler.Route(DepRunning, h.onDepRunning); err != nil {
 		return fmt.Errorf("h.handler.Route('%s'): %v", DepRunning, err)
 	}

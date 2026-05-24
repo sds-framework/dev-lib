@@ -94,34 +94,16 @@ func (test *TestDepClientSuite) TearDownTest() {
 	time.Sleep(time.Millisecond * 100)
 }
 
-// Test_10_Installed checks DepInstalled.
-func (test *TestDepClientSuite) Test_10_Installed() {
-	s := test.Suite.Require
-
-	installed, err := test.client.Installed(test.url, "")
-	s().NoError(err)
-	s().False(installed)
-}
-
 // Test_11_Uninstall deletes the dependency binary and source code when present.
 func (test *TestDepClientSuite) Test_11_Uninstall() {
 	s := test.Suite.Require
 
-	installed, err := test.client.Installed(test.url, "")
-	s().NoError(err)
-	s().False(installed)
-
 	// Uninstall
-	err = test.client.Uninstall(test.url, "", "")
+	err := test.client.Uninstall(test.url, "", "")
 	s().NoError(err)
 
 	// wait a bit for effect
 	time.Sleep(time.Millisecond * 100)
-
-	// After uninstallation, we should not have the binary
-	installed, err = test.client.Installed(test.url, "")
-	s().NoError(err)
-	s().False(installed)
 }
 
 //// Test_13_Run tests DepRunning, RunDep and CloseDep commands.

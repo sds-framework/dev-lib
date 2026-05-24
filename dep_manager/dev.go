@@ -203,10 +203,10 @@ func (manager *DepManager) Close(c *clientConfig.Client) error {
 	return nil
 }
 
-// Installed checks is the binary exist.
+// binExist checks that the binary exists.
 //
 // Whether the depManager is manageable or not doesn't matter.
-func (manager *DepManager) Installed(dep *Dep) bool {
+func (manager *DepManager) binExist(dep *Dep) bool {
 	if manager == nil || dep == nil {
 		return false
 	}
@@ -321,7 +321,7 @@ func (manager *DepManager) Run(dep *Dep, id string, optionalParent ...*clientCon
 		return fmt.Errorf("the dep with id '%s' already running", id)
 	}
 
-	ok = manager.Installed(dep)
+	ok = manager.binExist(dep)
 	if !ok {
 		return fmt.Errorf("no binary")
 	}
@@ -433,7 +433,7 @@ func (manager *DepManager) deleteBin(dep *Dep) error {
 		return fmt.Errorf("depManager binary is not manageable by the DepManager")
 	}
 
-	if !manager.Installed(dep) {
+	if !manager.binExist(dep) {
 		return fmt.Errorf("depManager '%s' not installed", dep.Url)
 	}
 
@@ -477,7 +477,7 @@ func (manager *DepManager) Uninstall(dep *Dep) error {
 	}
 
 	if dep.manageableBin {
-		exist := manager.Installed(dep)
+		exist := manager.binExist(dep)
 		if exist {
 			err := manager.deleteBin(dep)
 			if err != nil {

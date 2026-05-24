@@ -256,7 +256,7 @@ func (test *TestDepManagerSuite) Test_14_build() {
 	s().False(dep.manageableSrc)
 
 	// There should not be any binary before building
-	exist := test.depManager.Installed(dep)
+	exist := test.depManager.binExist(dep)
 	s().False(exist)
 
 	// build the binaries
@@ -264,14 +264,14 @@ func (test *TestDepManagerSuite) Test_14_build() {
 	s().NoError(err)
 
 	// There should be a binary after testing
-	exist = test.depManager.Installed(dep)
+	exist = test.depManager.binExist(dep)
 	s().True(exist)
 
 	// remove the compiled binary
 	err = os.Remove(dep.binPath)
 	s().NoError(err)
 
-	exist = test.depManager.Installed(dep)
+	exist = test.depManager.binExist(dep)
 	s().False(exist)
 }
 
@@ -319,7 +319,7 @@ func (test *TestDepManagerSuite) Test_16_deleteBin() {
 	test.depManager.Lint(dep)
 
 	// The binary is not there as the tests are cleaned
-	exist := test.depManager.Installed(dep)
+	exist := test.depManager.binExist(dep)
 	s().False(exist)
 
 	localBinPath := path.BinPath(filepath.Join(test.localTestDir, "test-manager", "bin"), "test")
@@ -328,18 +328,18 @@ func (test *TestDepManagerSuite) Test_16_deleteBin() {
 
 	// The binary must be presented
 	// There should not be any binary before building
-	exist = test.depManager.Installed(dep)
+	exist = test.depManager.binExist(dep)
 	s().True(exist)
 
 	// no linted dep has can not return a binary
 	dep, err = NewDep(test.url, "", "")
 	s().NoError(err)
-	exist = test.depManager.Installed(dep)
+	exist = test.depManager.binExist(dep)
 	s().False(exist)
 
 	// but after lint it must return the files
 	test.depManager.Lint(dep)
-	exist = test.depManager.Installed(dep)
+	exist = test.depManager.binExist(dep)
 	s().True(exist)
 
 	// Delete the binary
@@ -347,7 +347,7 @@ func (test *TestDepManagerSuite) Test_16_deleteBin() {
 	s().NoError(err)
 
 	// The binary should be removed from the file
-	exist = test.depManager.Installed(dep)
+	exist = test.depManager.binExist(dep)
 	s().False(exist)
 }
 
@@ -375,7 +375,7 @@ func (test *TestDepManagerSuite) Test_18_Uninstall() {
 	s().NoError(err)
 
 	// Test_7_Install should install the binary.
-	exist := test.depManager.Installed(dep)
+	exist := test.depManager.binExist(dep)
 	s().True(exist)
 
 	// Uninstall
@@ -383,7 +383,7 @@ func (test *TestDepManagerSuite) Test_18_Uninstall() {
 	s().NoError(err)
 
 	// After uninstallation, we should not have the binary
-	exist = test.depManager.Installed(dep)
+	exist = test.depManager.binExist(dep)
 	s().False(exist)
 
 	// Uninstalling won't take any effect as the binary was already removed
@@ -434,7 +434,7 @@ func (test *TestDepManagerSuite) Test_19_InvalidCompile() {
 	exist, err := test.depManager.srcExist(uncompilableDep)
 	s().NoError(err)
 	s().True(exist)
-	exist = test.depManager.Installed(uncompilableDep)
+	exist = test.depManager.binExist(uncompilableDep)
 	s().False(exist)
 
 	// building must fail, since "uncompilable" branch code is not buildable
@@ -518,7 +518,7 @@ func (test *TestDepManagerSuite) Test_21_RunError() {
 	test.depManager.Lint(dep)
 
 	// First, make sure that developer built the binary
-	exist := test.depManager.Installed(dep)
+	exist := test.depManager.binExist(dep)
 	s().True(exist)
 
 	// Let's run it

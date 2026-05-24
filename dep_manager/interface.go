@@ -9,9 +9,6 @@ import (
 // It doesn't have the `Stop` command.
 // Because, stopping must be done by the remote call from other services.
 type Interface interface {
-	// Installed checks is the service binary exists
-	Installed(dep *Dep) bool
-
 	// Run the dependency with the given id and parent.
 	Run(dep *Dep, id string, optionalParent ...*clientConfig.Client) error
 	// Uninstall the dependency.

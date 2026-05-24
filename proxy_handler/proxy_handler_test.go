@@ -21,11 +21,9 @@ import (
 )
 
 type MockedDepManager struct {
-	installedFail bool
-	installed     bool
-	runFail       bool
-	runningFail   bool
-	running       bool
+	runFail     bool
+	runningFail bool
+	running     bool
 }
 
 func (depClient *MockedDepManager) Close() error {
@@ -56,12 +54,6 @@ func (depClient *MockedDepManager) Running(*clientConfig.Client) (bool, error) {
 		return false, fmt.Errorf("running fail")
 	}
 	return depClient.running, nil
-}
-func (depClient *MockedDepManager) Installed(string, string) (bool, error) {
-	if depClient.installedFail {
-		return false, fmt.Errorf("installed fail")
-	}
-	return depClient.installed, nil
 }
 
 // Define the suite, and absorb the built-in basic suite

@@ -25,7 +25,6 @@ type Interface interface {
 	Uninstall(url string, localSrc string, localBin string) error
 	Run(url string, id string, parent *clientConfig.Client, localBin string) error
 	Running(depClient *clientConfig.Client) (bool, error)
-	Installed(url string, localBin string) (bool, error)
 }
 
 func New() (*Client, error) {
@@ -148,33 +147,6 @@ func (c *Client) Running(depClient *clientConfig.Client) (bool, error) {
 	}
 
 	res, err := reply.ReplyParameters().BoolValue("running")
-	if err != nil {
-		return false, fmt.Errorf("reply.Parameters.GetBoolean('installed'): %w", err)
-	}
-
-	return res, nil
-}
-
-// Installed checks is the service installed
-func (c *Client) Installed(url, localBin string) (bool, error) {
-	req := message.Request{
-		Command:    dep_handler.DepInstalled,
-		Parameters: key_value.New().Set("url", url),
-	}
-	if len(localBin) > 0 {
-		req.Parameters.Set("local_bin", localBin)
-	}
-
-	reply, err := c.socket.Request(&req)
-	if err != nil {
-		return false, fmt.Errorf("socket.Request('%s'): %w", dep_handler.DepInstalled, err)
-	}
-
-	if !reply.IsOK() {
-		return false, fmt.Errorf("reply.Message: %s", reply.ErrorMessage())
-	}
-
-	res, err := reply.ReplyParameters().BoolValue("installed")
 	if err != nil {
 		return false, fmt.Errorf("reply.Parameters.GetBoolean('installed'): %w", err)
 	}
