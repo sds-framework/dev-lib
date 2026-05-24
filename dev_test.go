@@ -44,10 +44,10 @@ func (test *TestDevCtxSuite) Test_10_New() {
 		ctx, err := New()
 		s().NoError(err)
 		test.logger.Info("start context", "i", i)
-		s().NoError(ctx.StartDepManager())
+		s().NoError(ctx.StartRuntimeHandler())
 		time.Sleep(time.Millisecond * 100)
 		test.logger.Info("close context", "i", i)
-		s().NoError(ctx.Close())
+		s().NoError(ctx.CloseRuntimeHandler())
 		time.Sleep(time.Millisecond * 100)
 	}
 

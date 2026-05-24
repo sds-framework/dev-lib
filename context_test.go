@@ -23,8 +23,7 @@ func (test *TestCtxSuite) Test_0_New() {
 
 	ctx, err := New("testdata/config.json")
 	s.Require().NoError(err)
-
-	s.Require().Equal(DevContext, ctx.Type())
+	s.Require().NotNil(ctx)
 }
 
 // In order for 'go test' to run this suite, we need to create

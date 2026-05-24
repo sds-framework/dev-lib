@@ -13,68 +13,57 @@ import (
 
 // A Context handles the config of the contexts
 type Context struct {
-	Config            config.SdsService
-	depHandler        *dep_handler.DepHandler
-	depHandlerManager manager_client.Interface
-	depClient         *dep_client.Client
+	Config                config.SdsService
+	runtimeHandler        *dep_handler.DepHandler
+	runtimeHandlerManager manager_client.Interface
+	runtimeClient         *dep_client.Client
 }
 
 // New creates a developer context and loads it with the dev configuration.
-func New(configPath string) (*Context, error) {
+func New(configPath ...string) (*Context, error) {
 	ctx := &Context{}
 
-	appConfig, err := config.Load(configPath)
+	cfgPath := ""
+	if len(configPath) > 1 {
+		return nil, fmt.Errorf("expected at most one config path")
+	}
+	if len(configPath) == 1 {
+		cfgPath = configPath[0]
+	}
+
+	appConfig, err := config.Load(cfgPath)
 	if err != nil {
-		return nil, fmt.Errorf("config.Load('%s'): %w", configPath, err)
+		return nil, fmt.Errorf("config.Load('%s'): %w", cfgPath, err)
 	}
 	ctx.Config = appConfig
 
 	return ctx, nil
 }
 
-func (ctx *Context) IsRunning() bool {
-	return ctx.depHandlerManager != nil
+func (ctx *Context) IsHandlerRunning() bool {
+	return ctx.runtimeHandlerManager != nil && ctx.runtimeHandler != nil
 }
 
-func (ctx *Context) IsDepManagerRunning() bool {
-	return ctx.depHandlerManager != nil
+func (ctx *Context) Runtime() dep_client.Interface {
+	return ctx.runtimeClient
 }
 
-func (ctx *Context) SetDepClient(dc dep_client.Interface) error {
-	devDc, ok := dc.(*dep_client.Client)
-	if !ok {
-		return fmt.Errorf("only dev context dep client supported")
-	}
-	ctx.depClient = devDc
-
-	return nil
-}
-
-func (ctx *Context) DepClient() dep_client.Interface {
-	return ctx.depClient
-}
-
-// Type returns the context type. Useful to identify contexts in the generic functions.
-func (ctx *Context) Type() ContextType {
-	return DevContext
-}
-
-// Close the dep handler. The dep manager client is not closed.
-func (ctx *Context) Close() error {
-	if ctx.depHandlerManager != nil {
-		if err := ctx.depHandlerManager.Close(); err != nil {
-			return fmt.Errorf("ctx.depHandlerManager.Close: %w", err)
+// CloseRuntimeHandler shuts down the runtime handler through its manager client.
+func (ctx *Context) CloseRuntimeHandler() error {
+	if ctx.runtimeHandlerManager != nil {
+		if err := ctx.runtimeHandlerManager.Close(); err != nil {
+			return fmt.Errorf("ctx.runtimeHandlerManager.Close: %w", err)
 		}
-		ctx.depHandlerManager = nil
+		ctx.runtimeHandlerManager = nil
 	}
 
 	return nil
 }
 
-// StartDepManager starts the dependency manager
-func (ctx *Context) StartDepManager() error {
-	if ctx.depHandlerManager != nil {
-		return fmt.Errorf("dep manager already started")
+// StartRuntimeHandler starts the runtime handler.
+func (ctx *Context) StartRuntimeHandler() error {
+	if ctx.runtimeHandlerManager != nil {
+		return fmt.Errorf("runtime handler already started")
 	}
 	srcPath, binPath, err := DevDefaultPaths()
 	if err != nil {
@@ -88,30 +77,27 @@ func (ctx *Context) StartDepManager() error {
 	if err := depRuntime.SetPaths(binPath, srcPath); err != nil {
 		return fmt.Errorf("depRuntime.SetPaths('%s', '%s'): %w", binPath, srcPath, err)
 	}
-	ctx.depHandler, err = dep_handler.New(depRuntime)
+	ctx.runtimeHandler, err = dep_handler.New(depRuntime)
 	if err != nil {
 		return fmt.Errorf("dep_handler.New: %w", err)
 	}
 
-	err = ctx.depHandler.Start()
+	err = ctx.runtimeHandler.Start()
 	if err != nil {
-		return fmt.Errorf("depHandler: %w", err)
+		return fmt.Errorf("runtimeHandler: %w", err)
 	}
 
-	ctx.depHandlerManager, err = manager_client.New(dep_handler.ServiceConfig())
+	ctx.runtimeHandlerManager, err = manager_client.New(dep_handler.ServiceConfig())
 	if err != nil {
 		return fmt.Errorf("manager_client.New('dep_handler'): %w", err)
 	}
 
-	depClient, err := dep_client.New()
+	runtimeAccess, err := dep_client.New()
 	if err != nil {
 		return fmt.Errorf("dep_client.New: %w", err)
 	}
 
-	err = ctx.SetDepClient(depClient)
-	if err != nil {
-		return fmt.Errorf("ctx.SetDepClient: %w", err)
-	}
+	ctx.runtimeClient = runtimeAccess
 
 	return nil
 }
