@@ -7,7 +7,6 @@ import (
 	config "github.com/sds-framework/config-lib"
 	"github.com/sds-framework/dev-lib/dep_client"
 	"github.com/sds-framework/dev-lib/dep_handler"
-	"github.com/sds-framework/dev-lib/runtime"
 	"github.com/sds-framework/handler-lib/manager_client"
 )
 
@@ -57,19 +56,9 @@ func (ctx *Context) StartRuntimeHandler() error {
 	if ctx.runtimeHandlerManager != nil {
 		return fmt.Errorf("runtime handler already started")
 	}
-	srcPath, binPath, err := DevDefaultPaths()
-	if err != nil {
-		return fmt.Errorf("DevDefaultPaths: %w", err)
-	}
 
-	//
-	// Start the dependency runtime
-	//
-	depRuntime := runtime.New()
-	if err := depRuntime.SetPaths(binPath, srcPath); err != nil {
-		return fmt.Errorf("depRuntime.SetPaths('%s', '%s'): %w", binPath, srcPath, err)
-	}
-	ctx.runtimeHandler, err = dep_handler.New(depRuntime)
+	var err error
+	ctx.runtimeHandler, err = dep_handler.New(&ctx.Config)
 	if err != nil {
 		return fmt.Errorf("dep_handler.New: %w", err)
 	}

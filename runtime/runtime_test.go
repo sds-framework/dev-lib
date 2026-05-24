@@ -1,13 +1,13 @@
 package runtime
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/pebbe/zmq4"
 	clientConfig "github.com/sds-framework/client-lib/config"
+	config "github.com/sds-framework/config-lib"
 	"github.com/sds-framework/log-lib"
 	"github.com/sds-framework/os-lib/path"
 	"github.com/stretchr/testify/suite"
@@ -42,13 +42,8 @@ func (test *TestDepManagerSuite) SetupTest() {
 	s().NoError(err)
 	test.currentDir = currentDir
 
-	srcPath := path.AbsDir(currentDir, "_sds/src")
-	binPath := path.AbsDir(currentDir, "_sds/bin")
-
-	// Make sure that the folders don't exist. They will be added later
 	test.runtime = &Runtime{
-		Src:         srcPath,
-		Bin:         binPath,
+		config:      &config.SdsService{},
 		runningDeps: make(map[string]*Dep, 0),
 		timeout:     DefaultTimeout,
 	}
@@ -66,32 +61,16 @@ func (test *TestDepManagerSuite) SetupTest() {
 	test.localTestDir = filepath.Join("../_test_services")
 }
 
-// Test_0_New tests the creation of the Runtime with the Runtime.SetPaths method.
+// Test_0_New tests the creation of the Runtime.
 func (test *TestDepManagerSuite) Test_0_New() {
 	s := test.Require
 
-	fmt.Printf("Test.New: %s bin is nil runtime: %v\n", test.runtime.Bin, test.runtime == nil)
-
-	// Before testing, we make sure that the files don't exist
-	exist, err := path.DirExist(test.runtime.Bin)
-	s().NoError(err)
-	s().False(exist)
-
-	exist, err = path.DirExist(test.runtime.Src)
-	s().NoError(err)
-	s().False(exist)
-
-	// If we create the Runtime with 'New,' it will create the folders.
-	depRuntime := New()
-	err = depRuntime.SetPaths(test.runtime.Src, test.runtime.Bin)
-	s().NoError(err)
-
-	// Now we can check for the directories
-	exist, _ = path.DirExist(depRuntime.Src)
-	s().True(exist)
-
-	exist, _ = path.DirExist(depRuntime.Bin)
-	s().True(exist)
+	cfg := &config.SdsService{}
+	depRuntime := New(cfg)
+	s().NotNil(depRuntime)
+	s().Same(cfg, depRuntime.config)
+	s().NotNil(depRuntime.runningDeps)
+	s().Equal(DefaultTimeout, depRuntime.timeout)
 
 	test.runtime = depRuntime
 }

@@ -7,11 +7,10 @@ import (
 
 	"github.com/sds-framework/client-lib"
 	clientConfig "github.com/sds-framework/client-lib/config"
-	"github.com/sds-framework/dev-lib/runtime"
+	config "github.com/sds-framework/config-lib"
 	handlerConfig "github.com/sds-framework/handler-lib/config"
 	"github.com/sds-framework/handler-lib/manager_client"
 	"github.com/sds-framework/log-lib"
-	"github.com/sds-framework/os-lib/path"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -25,7 +24,6 @@ type TestDepHandlerSuite struct {
 	logger            *log.Logger
 	depHandler        *DepHandler // the manager to test
 	depHandlerManager manager_client.Interface
-	currentDir        string               // executable to store the binaries and source codes
 	url               string               // dependency source code
 	id                string               // the id of the dependency
 	parent            *clientConfig.Client // the info about the service to which dependency should connect
@@ -41,19 +39,8 @@ func (test *TestDepHandlerSuite) SetupTest() {
 	logger, _ := log.New("test", false)
 	test.logger = logger
 
-	currentDir, err := path.CurrentDir()
-	s().NoError(err)
-	test.currentDir = currentDir
-
-	srcPath := path.AbsDir(currentDir, "_sds/src")
-	binPath := path.AbsDir(currentDir, "_sds/bin")
-
-	// Make sure that the folders don't exist. They will be added later
-	depRuntime := runtime.New()
-	err = depRuntime.SetPaths(srcPath, binPath)
-	s().NoError(err)
-
-	test.depHandler, err = New(depRuntime)
+	var err error
+	test.depHandler, err = New(&config.SdsService{})
 	s().NoError(err)
 
 	// Start the handler

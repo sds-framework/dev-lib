@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	clientConfig "github.com/sds-framework/client-lib/config"
+	config "github.com/sds-framework/config-lib"
 	"github.com/sds-framework/datatype-lib/data_type/key_value"
 	"github.com/sds-framework/datatype-lib/message"
 	"github.com/sds-framework/dev-lib/runtime"
@@ -21,9 +22,10 @@ const (
 	CloseDep   = "close-dep"   // the command to stop the running dependency
 )
 
+// Handler acts as the router from other app processes to the runtime.
 type DepHandler struct {
-	handler base.Interface
-	runtime runtime.Interface
+	handler base.Interface    // Receive commands
+	runtime runtime.Interface // Route to the functions from runtime
 }
 
 // ServiceConfig returns the socket configuration of the handler
@@ -32,7 +34,11 @@ func ServiceConfig() *handlerConfig.Handler {
 }
 
 // New dep handler returned
-func New(depRuntime runtime.Interface) (*DepHandler, error) {
+func New(cfg *config.SdsService) (*DepHandler, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("nil config")
+	}
+
 	handler := replier.New()
 
 	logger, err := log.New("dep_runtime", true)
@@ -47,7 +53,7 @@ func New(depRuntime runtime.Interface) (*DepHandler, error) {
 	}
 
 	return &DepHandler{
-		runtime: depRuntime,
+		runtime: runtime.New(cfg),
 		handler: handler,
 	}, nil
 }

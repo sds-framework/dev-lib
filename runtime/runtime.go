@@ -8,6 +8,7 @@ import (
 
 	"github.com/sds-framework/client-lib"
 	clientConfig "github.com/sds-framework/client-lib/config"
+	config "github.com/sds-framework/config-lib"
 	"github.com/sds-framework/datatype-lib/data_type/key_value"
 	"github.com/sds-framework/datatype-lib/message"
 	"github.com/sds-framework/dev-lib/source"
@@ -29,11 +30,9 @@ type Dep struct {
 
 // Runtime runs, stops, and checks dependency services.
 type Runtime struct {
+	config      *config.SdsService
 	runningDeps map[string]*Dep
 	timeout     time.Duration
-
-	Src string `json:"SERVICE_DEPS_SRC"` // Default Src path
-	Bin string `json:"SERVICE_DEPS_BIN"`
 }
 
 // NewDep returns dependency parameters.
@@ -65,13 +64,9 @@ func NewDep(url, localSrc, localBin string) (*Dep, error) {
 }
 
 // New creates a dependency runtime in the Dev context.
-//
-// It will prepare the directories for source codes and binary.
-// If preparation fails, it will throw an error.
-func New() *Runtime {
+func New(cfg *config.SdsService) *Runtime {
 	return &Runtime{
-		Src:         "",
-		Bin:         "",
+		config:      cfg,
 		runningDeps: make(map[string]*Dep, 0),
 		timeout:     DefaultTimeout,
 	}
@@ -88,20 +83,6 @@ func (dep *Dep) copy() *Dep {
 	}
 
 	return instance
-}
-
-func (rt *Runtime) SetPaths(srcPath string, binPath string) error {
-	if err := path.MakeDir(binPath); err != nil {
-		return fmt.Errorf("path.MakeDir(%s): %w", binPath, err)
-	}
-	if err := path.MakeDir(srcPath); err != nil {
-		return fmt.Errorf("path.MakeDir(%s): %w", srcPath, err)
-	}
-
-	rt.Src = srcPath
-	rt.Bin = binPath
-
-	return nil
 }
 
 // Close the dependency
