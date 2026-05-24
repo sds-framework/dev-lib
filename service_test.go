@@ -4,16 +4,19 @@ import "testing"
 
 func testService() (*Service, Handler, Handler, Handler) {
 	handlerOfType := Handler{
-		Type:   ReplierType,
-		Socket: Socket{Id: "handler_1", Port: 4101},
+		Type:     ReplierType,
+		Category: "public",
+		Socket:   Socket{Id: "handler_1", Port: 4101},
 	}
 	handler2OfType := Handler{
-		Type:   ReplierType,
-		Socket: Socket{Id: "handler_2", Port: 4102},
+		Type:     ReplierType,
+		Category: "internal",
+		Socket:   Socket{Id: "handler_2", Port: 4102},
 	}
 	handlerOfType2 := Handler{
-		Type:   SyncReplierType,
-		Socket: Socket{Id: "handler_3", Port: 4103},
+		Type:     SyncReplierType,
+		Category: "sync",
+		Socket:   Socket{Id: "handler_3", Port: 4103},
 	}
 
 	return New("service_id", IndependentType), handlerOfType, handler2OfType, handlerOfType2
@@ -36,6 +39,11 @@ func TestServiceValidateTypes(t *testing.T) {
 	generatedService.Type = IndependentType
 	if err := generatedService.ValidateTypes(); err != nil {
 		t.Fatalf("ValidateTypes valid service: %v", err)
+	}
+
+	generatedService.Handlers = []Handler{{Type: ReplierType}}
+	if err := generatedService.ValidateTypes(); err == nil {
+		t.Fatal("ValidateTypes with empty handler category returned nil error")
 	}
 
 	generatedService.Handlers = []Handler{invalidHandler}
@@ -64,64 +72,26 @@ func TestValidateCommandDep(t *testing.T) {
 	}
 }
 
-func TestServiceHandlerByType(t *testing.T) {
+func TestServiceHandlerByCategory(t *testing.T) {
 	serviceConfig, handlerOfType, handler2OfType, handlerOfType2 := testService()
-	nonExistType := HandlerType("not_found_type")
 	serviceConfig.Handlers = []Handler{handlerOfType, handler2OfType, handlerOfType2}
 
-	if _, err := serviceConfig.HandlerByType(""); err == nil {
-		t.Fatal("HandlerByType with empty type returned nil error")
+	if _, err := serviceConfig.HandlerByCategory(""); err == nil {
+		t.Fatal("HandlerByCategory with empty category returned nil error")
 	}
-	if _, err := serviceConfig.HandlersByType(""); err == nil {
-		t.Fatal("HandlersByType with empty type returned nil error")
-	}
-
-	if _, err := serviceConfig.HandlerByType(nonExistType); err == nil {
-		t.Fatal("HandlerByType with missing type returned nil error")
-	}
-	if _, err := serviceConfig.HandlersByType(nonExistType); err == nil {
-		t.Fatal("HandlersByType with missing type returned nil error")
+	if _, err := serviceConfig.HandlerByCategory("missing"); err == nil {
+		t.Fatal("HandlerByCategory with missing category returned nil error")
 	}
 
-	foundHandler, err := serviceConfig.HandlerByType(ReplierType)
+	foundHandler, err := serviceConfig.HandlerByCategory("public")
 	if err != nil {
-		t.Fatalf("HandlerByType replier: %v", err)
+		t.Fatalf("HandlerByCategory public: %v", err)
 	}
 	if foundHandler.Socket.Id != handlerOfType.Socket.Id {
 		t.Fatalf("handler id = %q, want %q", foundHandler.Socket.Id, handlerOfType.Socket.Id)
 	}
-
-	foundHandler, err = serviceConfig.HandlerByType(SyncReplierType)
-	if err != nil {
-		t.Fatalf("HandlerByType sync replier: %v", err)
-	}
-	if foundHandler.Socket.Id != handlerOfType2.Socket.Id {
-		t.Fatalf("handler id = %q, want %q", foundHandler.Socket.Id, handlerOfType2.Socket.Id)
-	}
-
-	foundHandlers, err := serviceConfig.HandlersByType(ReplierType)
-	if err != nil {
-		t.Fatalf("HandlersByType replier: %v", err)
-	}
-	if len(foundHandlers) != 2 {
-		t.Fatalf("len(foundHandlers) = %d, want 2", len(foundHandlers))
-	}
-	if foundHandlers[0].Socket.Id != handlerOfType.Socket.Id {
-		t.Fatalf("first handler id = %q, want %q", foundHandlers[0].Socket.Id, handlerOfType.Socket.Id)
-	}
-	if foundHandlers[1].Socket.Id != handler2OfType.Socket.Id {
-		t.Fatalf("second handler id = %q, want %q", foundHandlers[1].Socket.Id, handler2OfType.Socket.Id)
-	}
-
-	foundHandlers, err = serviceConfig.HandlersByType(SyncReplierType)
-	if err != nil {
-		t.Fatalf("HandlersByType sync replier: %v", err)
-	}
-	if len(foundHandlers) != 1 {
-		t.Fatalf("len(foundHandlers) = %d, want 1", len(foundHandlers))
-	}
-	if foundHandlers[0].Socket.Id != handlerOfType2.Socket.Id {
-		t.Fatalf("handler id = %q, want %q", foundHandlers[0].Socket.Id, handlerOfType2.Socket.Id)
+	if foundHandler.Category != handlerOfType.Category {
+		t.Fatalf("handler category = %q, want %q", foundHandler.Category, handlerOfType.Category)
 	}
 }
 
@@ -130,8 +100,9 @@ func TestServiceGetHandler(t *testing.T) {
 	serviceConfig.Handlers = []Handler{
 		handlerOfType,
 		{
-			Type:   PairType,
-			Socket: Socket{Id: handlerOfType.Socket.Id, Port: 9999},
+			Type:     PairType,
+			Category: "pair",
+			Socket:   Socket{Id: handlerOfType.Socket.Id, Port: 9999},
 		},
 		handlerOfType2,
 	}
@@ -182,8 +153,9 @@ func TestServiceSetHandler(t *testing.T) {
 	}
 
 	updatedHandler := Handler{
-		Type:   PairType,
-		Socket: Socket{Id: handlerOfType.Socket.Id},
+		Type:     PairType,
+		Category: "pair",
+		Socket:   Socket{Id: handlerOfType.Socket.Id},
 	}
 	serviceConfig.SetHandler(updatedHandler)
 	if len(serviceConfig.Handlers) != 2 {

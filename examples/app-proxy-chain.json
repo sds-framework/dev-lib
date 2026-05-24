@@ -6,6 +6,7 @@
       "handlers": [
         {
           "type": "Replier",
+          "category": "public-api",
           "socket": {
             "id": "public_1",
             "port": 4101
@@ -28,6 +29,7 @@
       "handlers": [
         {
           "type": "Replier",
+          "category": "auth-proxy",
           "socket": {
             "id": "auth_1",
             "port": 4201
@@ -49,6 +51,7 @@
       "handlers": [
         {
           "type": "Replier",
+          "category": "audit-proxy",
           "socket": {
             "id": "audit_1",
             "port": 4301
@@ -70,6 +73,7 @@
       "handlers": [
         {
           "type": "Replier",
+          "category": "user-service",
           "socket": {
             "id": "user_api_1",
             "port": 4401

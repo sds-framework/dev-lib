@@ -112,8 +112,9 @@ func TestLoadSave(t *testing.T) {
 	sample := New("api", IndependentType)
 	sample.Handlers = []Handler{
 		{
-			Type:   ReplierType,
-			Socket: Socket{Id: "api_1", Port: 4101},
+			Type:     ReplierType,
+			Category: "api",
+			Socket:   Socket{Id: "api_1", Port: 4101},
 		},
 	}
 	if err := original.SetService(*sample); err != nil {

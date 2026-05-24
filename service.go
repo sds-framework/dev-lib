@@ -18,6 +18,7 @@ type Socket struct {
 
 type Handler struct {
 	Type        HandlerType  `json:"type"`
+	Category    string       `json:"category"`
 	Socket      Socket       `json:"socket"`
 	CommandDeps []CommandDep `json:"command-deps,omitempty"`
 }
@@ -54,6 +55,9 @@ func (s *Service) ValidateTypes() error {
 		if err := ValidateHandlerType(c.Type); err != nil {
 			return fmt.Errorf("ValidateHandlerType: %v", err)
 		}
+		if len(c.Category) == 0 {
+			return fmt.Errorf("handler category is empty")
+		}
 
 		for _, dep := range c.CommandDeps {
 			if err := ValidateCommandDep(dep); err != nil {
@@ -65,45 +69,21 @@ func (s *Service) ValidateTypes() error {
 	return nil
 }
 
-// HandlerByType returns the handler config by the handler type.
+// HandlerByCategory returns the handler config by the handler category.
 // If the handler doesn't exist, then it returns an error.
-func (s *Service) HandlerByType(handlerType HandlerType) (Handler, error) {
-	if len(handlerType) == 0 {
-		return Handler{}, fmt.Errorf("handlerType argument is empty")
+func (s *Service) HandlerByCategory(category string) (Handler, error) {
+	if len(category) == 0 {
+		return Handler{}, fmt.Errorf("category argument is empty")
 	}
 
 	i := slices.IndexFunc(s.Handlers, func(e Handler) bool {
-		return e.Type == handlerType
+		return e.Category == category
 	})
 	if i == -1 {
-		return Handler{}, fmt.Errorf("handler of '%s' type not found", handlerType)
+		return Handler{}, fmt.Errorf("handler of '%s' category not found", category)
 	}
 
 	return s.Handlers[i], nil
-}
-
-// HandlersByType returns the multiple handlers of the given type.
-// If the handlers don't exist, then it returns an error
-func (s *Service) HandlersByType(handlerType HandlerType) ([]Handler, error) {
-	if len(handlerType) == 0 {
-		return nil, fmt.Errorf("handlerType argument is empty")
-	}
-
-	handlers := make([]Handler, 0)
-	i := 0
-
-	for _, c := range s.Handlers {
-		if c.Type == handlerType {
-			handlers = slices.Grow(handlers, 1)
-			handlers = slices.Insert(handlers, i, c)
-			i++
-		}
-	}
-
-	if len(handlers) == 0 {
-		return nil, fmt.Errorf("no '%s' handlers config", handlerType)
-	}
-	return handlers, nil
 }
 
 // GetHandler returns a handler by its socket id and port.

@@ -20,6 +20,7 @@ There is no runtime config server, engine, or client API in this module.
       "handlers": [
         {
           "type": "Replier",
+          "category": "public-api",
           "socket": {
             "id": "public_1",
             "port": 4101
@@ -58,8 +59,9 @@ if err != nil {
 
 updated := svc
 updated.Handlers = append(updated.Handlers, config.Handler{
-    Type:   config.ReplierType,
-    Socket: config.Socket{Id: "public_2", Port: 4102},
+    Type:     config.ReplierType,
+    Category: "public-api",
+    Socket:   config.Socket{Id: "public_2", Port: 4102},
 })
 if err := a.SetService(updated); err != nil {
     panic(err)
@@ -86,6 +88,8 @@ Supported handler types:
 - `Replier`
 - `Publisher`
 - `Pair`
+
+Each handler must define a `category`, which consumers can use to group and classify handlers.
 
 Each `command-deps` entry must name a `command` and at least one routing target: `proxies` and/or `extensions`. A command without dependencies is invalid.
 
