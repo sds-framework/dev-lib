@@ -1,10 +1,9 @@
-# Dev Lib
+# Context
 
-`dev-lib` provides the development context for SDS services.
+`context` provides context for [SDS services](https://github.com/sds-framework/service-lib).
 
-The context owns the local service configuration and exposes an internal runtime
-client for starting, stopping, adding, updating, and removing dependency services
-during development.
+The context owns app configuration and exposes a runtime
+client for starting, stopping, adding, updating, and removing dependency services during development or later after its compiled.
 
 ## Current Model
 
@@ -14,7 +13,7 @@ service's `StartCommand`.
 Use the current module version from Git:
 
 ```sh
-go get github.com/sds-framework/dev-lib@latest
+go get github.com/sds-framework/context@latest
 ```
 
 This version requires `github.com/sds-framework/config-lib` with `config.Socket`,
@@ -30,7 +29,7 @@ handler should bind to. Then start the in-process runtime handler and use
 package main
 
 import (
-	dev "github.com/sds-framework/dev-lib"
+	sdscontext "github.com/sds-framework/context"
 	config "github.com/sds-framework/config-lib"
 )
 
@@ -40,7 +39,7 @@ func main() {
 		Port: 0,
 	}
 
-	ctx, err := dev.New("service.json", runtimeSocket)
+	ctx, err := sdscontext.New("service.json", runtimeSocket)
 	if err != nil {
 		panic(err)
 	}
@@ -176,7 +175,7 @@ refuses to remove a service that is currently running.
 
 ## Service Requirements
 
-Every service managed by `dev-lib` must have at least one handler that manages
+Every service managed by `context` must have at least one handler that manages
 the service itself. By convention this handler uses category `manager`.
 
 The runtime uses the `manager` handler to:

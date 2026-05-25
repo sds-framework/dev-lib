@@ -60,7 +60,7 @@ func (test *TestClientSuite) SetupTest() {
 
 	test.id = "test-manager"
 	test.parent = &clientConfig.Client{
-		ServiceUrl: "dev-lib",
+		ServiceUrl: "context",
 		Id:         "parent",
 		Port:       120,
 		TargetType: handlerConfig.SocketType(handlerConfig.ReplierType),

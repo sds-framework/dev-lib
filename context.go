@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	config "github.com/sds-framework/config-lib"
-	"github.com/sds-framework/dev-lib/runtime"
+	"github.com/sds-framework/context/runtime"
 )
 
 // A Context handles the config of the contexts

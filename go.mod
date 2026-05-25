@@ -1,4 +1,4 @@
-module github.com/sds-framework/dev-lib
+module github.com/sds-framework/context
 
 go 1.19
 

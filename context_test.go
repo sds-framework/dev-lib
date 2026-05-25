@@ -6,7 +6,7 @@ import (
 	"time"
 
 	config "github.com/sds-framework/config-lib"
-	"github.com/sds-framework/dev-lib/runtime"
+	"github.com/sds-framework/context/runtime"
 	"github.com/sds-framework/log-lib"
 	"github.com/stretchr/testify/suite"
 )
