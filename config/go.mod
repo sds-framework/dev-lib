@@ -1,3 +1,3 @@
-module github.com/sds-framework/config-lib
+module github.com/sds-framework/context/config
 
 go 1.19

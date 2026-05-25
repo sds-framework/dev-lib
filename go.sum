@@ -42,8 +42,6 @@ github.com/rivo/uniseg v0.4.4/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUc
 github.com/rogpeppe/go-internal v1.8.1 h1:geMPLpDpQOgVyCg5z5GoRwLHepNdb71NXb67XFkP+Eg=
 github.com/sds-framework/client-lib v0.0.0-20260519122907-8d1f99d41b57 h1:lc4jCJ4DeDmpLvYso6a09pmp2bAhmXm5Ru2UDemNYWs=
 github.com/sds-framework/client-lib v0.0.0-20260519122907-8d1f99d41b57/go.mod h1:AReE+OOAQ9mAgE/BocS59XjHHwVK/sqSao4N1LVAyWk=
-github.com/sds-framework/config-lib v0.0.0-20260524170747-54ac34160875 h1:EnK5a/bDV0nzfQ4WjM1z8GVE/yki38Vo6y45G46b8Ek=
-github.com/sds-framework/config-lib v0.0.0-20260524170747-54ac34160875/go.mod h1:mPM1kVRp9EjwQEyBzYW921JjXRpdx3dEMI8ncrcX3lM=
 github.com/sds-framework/datatype-lib v0.0.0-20260519113206-6acc97659255 h1:+/+8BNEEPRA+pFQF3rOI5UkLrdogjdMj5siRHBo2Yko=
 github.com/sds-framework/datatype-lib v0.0.0-20260519113206-6acc97659255/go.mod h1:QD+naKxneE4a35lVe7sw3qU4gbHBug1Z1WpWQA78780=
 github.com/sds-framework/handler-lib v0.0.0-20260524132142-244a50ce48c6 h1:HXUKNuexPneSggjEs2cz4ASdi0m8NxZdfmhsIsEf/Qk=

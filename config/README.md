@@ -44,7 +44,7 @@ See [examples/app-proxy-chain.json](examples/app-proxy-chain.json) for a full pr
 
 ```go
 import (
-    config "github.com/sds-framework/config-lib"
+    config "github.com/sds-framework/context/config"
 )
 
 a, err := config.Load("app.json")

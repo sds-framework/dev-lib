@@ -1,45 +1,72 @@
 # Context
 
-`context` provides context for [SDS services](https://github.com/sds-framework/service-lib).
+`context` is a Go library for applications built on the SDS framework.
 
-The context owns app configuration and exposes a runtime
-client for starting, stopping, adding, updating, and removing dependency services during development or later after its compiled.
+`context` owns your app's SDS service configuration and exposes a runtime client
+for starting, stopping, adding, updating, and removing dependency services while
+your app is running. You can manage the services both programmatically, by
+simply calling the client, or you can call it by cli.
 
-## Current Model
+The `context` uses the simples form of management. It uses commands and calls `os.Exec`
+as if its a bash script.
 
-Dependency services are configured with `config-lib` and started from each
-service's `StartCommand`.
+If you want to manage your app in another environment, lets say in Kubernetes or Docker,
+then use `context.Interface` and simpply replace this module with yours.
 
-Use the current module version from Git:
+The `context.Interface` from `interface.go` in the root of this module:
+
+```go
+type Interface interface {
+	StartRuntimeHandler() error
+	Runtime() runtime.ClientInterface
+}
+```
+
+That keeps most of your app independent from the concrete `Context` struct while
+still giving it access to service lifecycle operations through `ctx.Runtime()`.
+
+## Install
 
 ```sh
 go get github.com/sds-framework/context@latest
 ```
 
-This version requires `github.com/sds-framework/config-lib` with `config.Socket`,
-`config.Service`, `config.Handler`, and `SdsService.Save()` support.
+## Setup
 
-## Context API
+Assume you are implementing an SDS service. This is close to how an app built
+from `github.com/sds-framework/service` would wire its startup.
 
-Create a context from a config file and the socket that the internal runtime
-handler should bind to. Then start the in-process runtime handler and use
-`Runtime()` to control dependency services.
+First, load the context module and config types:
 
 ```go
 package main
 
 import (
 	sdscontext "github.com/sds-framework/context"
-	config "github.com/sds-framework/config-lib"
+	config "github.com/sds-framework/context/config"
 )
+```
 
+Second, choose the configuration file name. The file does not have to exist yet.
+It is where `context` will load and store your app's SDS service configuration.
+
+Config does two things: **service metadata** and **runtime wiring**.
+
+```go
+const configPath = "service.json"
+```
+
+Finally, set up context, launch its runtime handler, and call `ctx.Runtime()`
+from your service code:
+
+```go
 func main() {
 	runtimeSocket := config.Socket{
-		Id:   "dep_handler",
+		Id:   "runtime",
 		Port: 0,
 	}
 
-	ctx, err := sdscontext.New("service.json", runtimeSocket)
+	ctx, err := sdscontext.New(configPath, runtimeSocket)
 	if err != nil {
 		panic(err)
 	}
@@ -53,12 +80,16 @@ func main() {
 }
 ```
 
-The public context interface is intentionally small:
+The `context/config` import is only needed here because `New` currently accepts
+a `config.Socket`. You do not need to call `config.Load` yourself.
+
+Use the interface in the rest of your app:
 
 ```go
-type Interface interface {
-	StartRuntimeHandler() error
-	Runtime() runtime.ClientInterface
+func runService(ctx sdscontext.Interface) error {
+	runtimeClient := ctx.Runtime()
+	_ = runtimeClient
+	return nil
 }
 ```
 
@@ -117,8 +148,8 @@ example `database1`.
 
 ## Runtime Package
 
-The runtime package now contains the service runtime, runtime handler, and
-runtime client.
+The `runtime` package contains the service runtime, runtime handler, and
+runtime client used by `Context`.
 
 Constructors:
 
@@ -127,12 +158,6 @@ rt := runtime.New(cfg)
 handler, err := runtime.NewHandler(cfg, runtimeSocket)
 client, err := runtime.NewClient(runtimeSocket)
 ```
-
-The old `dep_client` and `dep_handler` packages were folded into `runtime`.
-Their generic `New()` constructors were renamed to avoid collisions:
-
-- `dep_handler.New(...)` became `runtime.NewHandler(...)`
-- `dep_client.New()` became `runtime.NewClient()`
 
 ## Service Management
 
@@ -235,5 +260,4 @@ go test .
 ```
 
 Runtime tests compile, but tests that start sample binaries require local test
-fixtures for those binaries. The old `_test_services` submodules have been
-removed.
+fixtures for those binaries under `_test_services`.

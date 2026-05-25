@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	clientConfig "github.com/sds-framework/client-lib/config"
-	config "github.com/sds-framework/config-lib"
+	config "github.com/sds-framework/context/config"
 	"github.com/sds-framework/datatype-lib/data_type/key_value"
 	"github.com/sds-framework/datatype-lib/message"
 	"github.com/sds-framework/handler-lib/base"

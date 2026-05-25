@@ -4,7 +4,7 @@ package context
 import (
 	"fmt"
 
-	config "github.com/sds-framework/config-lib"
+	config "github.com/sds-framework/context/config"
 	"github.com/sds-framework/context/runtime"
 )
 

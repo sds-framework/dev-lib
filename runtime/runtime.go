@@ -9,7 +9,7 @@ import (
 
 	"github.com/sds-framework/client-lib"
 	clientConfig "github.com/sds-framework/client-lib/config"
-	config "github.com/sds-framework/config-lib"
+	config "github.com/sds-framework/context/config"
 	"github.com/sds-framework/datatype-lib/data_type/key_value"
 	"github.com/sds-framework/datatype-lib/message"
 	handlerConfig "github.com/sds-framework/handler-lib/config"
