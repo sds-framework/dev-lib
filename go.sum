@@ -9,8 +9,8 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/go-logfmt/logfmt v0.6.0 h1:wGYYu3uicYdqXVgoYbvnkrPVXkuLM1p1ifugDMEdRi4=
 github.com/go-logfmt/logfmt v0.6.0/go.mod h1:WYhtIu8zTZfxdn5+rREduYbwxfcBr/Vr6KEVveWlfTs=
 github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0/go.mod h1:E/TSTwGwJL78qG/PmXZO1EjYhfJinVAhrmmHX6Z8B9k=
-github.com/google/uuid v1.3.1 h1:KjJaJ9iWZ3jOFZIf1Lqf4laDRCasjl0BCmnEGxkdLb4=
-github.com/google/uuid v1.3.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/kr/pretty v0.3.0 h1:WgNl7dwNpEZ6jJ9k1snq4pZsg7DOEN8hP9Xw0Tsjwk0=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69Aj6K7nkY=
@@ -40,16 +40,6 @@ github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJ
 github.com/rivo/uniseg v0.4.4 h1:8TfxU8dW6PdqD27gjM8MVNuicgxIjxpm4K7x4jp8sis=
 github.com/rivo/uniseg v0.4.4/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
 github.com/rogpeppe/go-internal v1.8.1 h1:geMPLpDpQOgVyCg5z5GoRwLHepNdb71NXb67XFkP+Eg=
-github.com/sds-framework/client-lib v0.0.0-20260519122907-8d1f99d41b57 h1:lc4jCJ4DeDmpLvYso6a09pmp2bAhmXm5Ru2UDemNYWs=
-github.com/sds-framework/client-lib v0.0.0-20260519122907-8d1f99d41b57/go.mod h1:AReE+OOAQ9mAgE/BocS59XjHHwVK/sqSao4N1LVAyWk=
-github.com/sds-framework/datatype-lib v0.0.0-20260519113206-6acc97659255 h1:+/+8BNEEPRA+pFQF3rOI5UkLrdogjdMj5siRHBo2Yko=
-github.com/sds-framework/datatype-lib v0.0.0-20260519113206-6acc97659255/go.mod h1:QD+naKxneE4a35lVe7sw3qU4gbHBug1Z1WpWQA78780=
-github.com/sds-framework/handler-lib v0.0.0-20260524132142-244a50ce48c6 h1:HXUKNuexPneSggjEs2cz4ASdi0m8NxZdfmhsIsEf/Qk=
-github.com/sds-framework/handler-lib v0.0.0-20260524132142-244a50ce48c6/go.mod h1:5htWBooc1xS5v82Oz87wPiH0+TOuigmFeucyGKBEirY=
-github.com/sds-framework/log-lib v0.0.0-20260519113119-b6fe63f7315e h1:P2moT2MNcMYpzXvos/ZKiKX/wI/n6zCKPoBe/vlTHTk=
-github.com/sds-framework/log-lib v0.0.0-20260519113119-b6fe63f7315e/go.mod h1:ihGbhsnkEwUJBjhfcUwihO9wSXpRx9aEIj8+W6P9Aio=
-github.com/sds-framework/os-lib v0.0.0-20260521183157-f0aa0d7add8a h1:1LtMoJ+wZlALR4m8rxeLzODywTbpAU9BnpZLpwz0b48=
-github.com/sds-framework/os-lib v0.0.0-20260521183157-f0aa0d7add8a/go.mod h1:P6jWnEgvfFnDlZMWRmrDM863nYDKlX5+X5pYbS+nVFo=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/wcharczuk/go-chart/v2 v2.1.0/go.mod h1:yx7MvAVNcP/kN9lKXM/NTce4au4DFN99j6i1OwDclNA=

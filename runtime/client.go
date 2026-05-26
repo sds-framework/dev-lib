@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sds-framework/client-lib"
-	clientConfig "github.com/sds-framework/client-lib/config"
-	config "github.com/sds-framework/context/config"
-	"github.com/sds-framework/datatype-lib/data_type/key_value"
-	"github.com/sds-framework/datatype-lib/message"
-	handlerConfig "github.com/sds-framework/handler-lib/config"
+	config "github.com/noPerfection/context/config"
+	"github.com/noPerfection/protocol/client"
+	clientConfig "github.com/noPerfection/protocol/client/config"
+	"github.com/noPerfection/datatype"
+	"github.com/noPerfection/protocol/message"
+	handlerConfig "github.com/noPerfection/protocol/handler/config"
 )
 
 type Client struct {
@@ -60,7 +60,7 @@ func (c *Client) Close() error {
 func (c *Client) StopService(serviceName string) error {
 	req := message.Request{
 		Command: StopService,
-		Parameters: key_value.New().
+		Parameters: datatype.New().
 			Set("service", serviceName),
 	}
 
@@ -88,7 +88,7 @@ func (c *Client) StopService(serviceName string) error {
 func (c *Client) AddService(service config.Service) error {
 	req := message.Request{
 		Command: AddService,
-		Parameters: key_value.New().
+		Parameters: datatype.New().
 			Set("service", service),
 	}
 
@@ -108,7 +108,7 @@ func (c *Client) AddService(service config.Service) error {
 func (c *Client) SetService(service config.Service) error {
 	req := message.Request{
 		Command: SetService,
-		Parameters: key_value.New().
+		Parameters: datatype.New().
 			Set("service", service),
 	}
 
@@ -128,7 +128,7 @@ func (c *Client) SetService(service config.Service) error {
 func (c *Client) RemoveService(serviceName string) error {
 	req := message.Request{
 		Command: RemoveService,
-		Parameters: key_value.New().
+		Parameters: datatype.New().
 			Set("service", serviceName),
 	}
 
@@ -148,7 +148,7 @@ func (c *Client) RemoveService(serviceName string) error {
 func (c *Client) StartService(serviceName string, parent *clientConfig.Client) (string, error) {
 	req := message.Request{
 		Command: StartService,
-		Parameters: key_value.New().
+		Parameters: datatype.New().
 			Set("parent", parent).
 			Set("service", serviceName),
 	}
@@ -174,7 +174,7 @@ func (c *Client) StartService(serviceName string, parent *clientConfig.Client) (
 func (c *Client) IsServiceRunning(serviceName string) (bool, error) {
 	req := message.Request{
 		Command: IsServiceRunning,
-		Parameters: key_value.New().
+		Parameters: datatype.New().
 			Set("service", serviceName),
 	}
 

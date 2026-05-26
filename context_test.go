@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	config "github.com/sds-framework/context/config"
-	"github.com/sds-framework/context/runtime"
-	"github.com/sds-framework/log-lib"
+	config "github.com/noPerfection/context/config"
+	"github.com/noPerfection/context/runtime"
+	"github.com/noPerfection/log"
 	"github.com/stretchr/testify/suite"
 )
 

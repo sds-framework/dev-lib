@@ -4,8 +4,8 @@ package context
 import (
 	"fmt"
 
-	config "github.com/sds-framework/context/config"
-	"github.com/sds-framework/context/runtime"
+	config "github.com/noPerfection/context/config"
+	"github.com/noPerfection/context/runtime"
 )
 
 // A Context handles the config of the contexts

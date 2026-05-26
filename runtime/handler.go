@@ -4,14 +4,14 @@ package runtime
 import (
 	"fmt"
 
-	clientConfig "github.com/sds-framework/client-lib/config"
-	config "github.com/sds-framework/context/config"
-	"github.com/sds-framework/datatype-lib/data_type/key_value"
-	"github.com/sds-framework/datatype-lib/message"
-	"github.com/sds-framework/handler-lib/base"
-	handlerConfig "github.com/sds-framework/handler-lib/config"
-	"github.com/sds-framework/handler-lib/replier"
-	"github.com/sds-framework/log-lib"
+	config "github.com/noPerfection/context/config"
+	"github.com/noPerfection/datatype"
+	"github.com/noPerfection/protocol/message"
+	"github.com/noPerfection/log"
+	clientConfig "github.com/noPerfection/protocol/client/config"
+	"github.com/noPerfection/protocol/handler/base"
+	handlerConfig "github.com/noPerfection/protocol/handler/config"
+	"github.com/noPerfection/protocol/handler/replier"
 )
 
 const (
@@ -79,7 +79,7 @@ func (h *Handler) onIsServiceRunning(req message.RequestInterface) message.Reply
 		return req.Fail(fmt.Sprintf("h.runtime.IsServiceRunning: %v", err))
 	}
 
-	params := key_value.New().Set("running", running)
+	params := datatype.New().Set("running", running)
 	return req.Ok(params)
 }
 
@@ -117,7 +117,7 @@ func (h *Handler) onStartService(req message.RequestInterface) message.ReplyInte
 		return req.Fail(fmt.Sprintf("h.runtime.StartService(service: '%s'): %v", serviceName, err))
 	}
 
-	return req.Ok(key_value.New().Set("id", id))
+	return req.Ok(datatype.New().Set("id", id))
 }
 
 // onAddService registers a service in the runtime configuration.
@@ -139,7 +139,7 @@ func (h *Handler) onAddService(req message.RequestInterface) message.ReplyInterf
 		return req.Fail(fmt.Sprintf("h.runtime.AddService('%s'): %v", service.Name, err))
 	}
 
-	return req.Ok(key_value.New())
+	return req.Ok(datatype.New())
 }
 
 // onSetService updates a service in the runtime configuration.
@@ -161,7 +161,7 @@ func (h *Handler) onSetService(req message.RequestInterface) message.ReplyInterf
 		return req.Fail(fmt.Sprintf("h.runtime.SetService('%s'): %v", service.Name, err))
 	}
 
-	return req.Ok(key_value.New())
+	return req.Ok(datatype.New())
 }
 
 // onRemoveService removes a service from the runtime configuration.
@@ -177,7 +177,7 @@ func (h *Handler) onRemoveService(req message.RequestInterface) message.ReplyInt
 		return req.Fail(fmt.Sprintf("h.runtime.RemoveService('%s'): %v", serviceName, err))
 	}
 
-	return req.Ok(key_value.New())
+	return req.Ok(datatype.New())
 }
 
 // onStopService stops the dependency.
@@ -193,7 +193,7 @@ func (h *Handler) onStopService(req message.RequestInterface) message.ReplyInter
 		return req.Fail(fmt.Sprintf("h.runtime.StopService: %v", err))
 	}
 
-	return req.Ok(key_value.New())
+	return req.Ok(datatype.New())
 }
 
 // Start starts the dependency handler with the available operations.

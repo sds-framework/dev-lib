@@ -4,10 +4,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	clientConfig "github.com/sds-framework/client-lib/config"
-	config "github.com/sds-framework/context/config"
-	"github.com/sds-framework/log-lib"
-	"github.com/sds-framework/os-lib/path"
+	config "github.com/noPerfection/context/config"
+	clientConfig "github.com/noPerfection/protocol/client/config"
+	"github.com/noPerfection/log"
+	"github.com/noPerfection/os/path"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -79,7 +79,7 @@ func (test *TestDepManagerSuite) SetupTest() {
 	}
 
 	// A valid source code that we want to download
-	test.url = "github.com/sds-framework/test-manager"
+	test.url = "github.com/noPerfection/test-manager"
 
 	test.id = "test-manager"
 	test.parent = &clientConfig.Client{

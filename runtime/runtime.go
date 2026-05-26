@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sds-framework/client-lib"
-	clientConfig "github.com/sds-framework/client-lib/config"
-	config "github.com/sds-framework/context/config"
-	"github.com/sds-framework/datatype-lib/data_type/key_value"
-	"github.com/sds-framework/datatype-lib/message"
-	handlerConfig "github.com/sds-framework/handler-lib/config"
-	"github.com/sds-framework/log-lib"
+	config "github.com/noPerfection/context/config"
+	"github.com/noPerfection/datatype"
+	"github.com/noPerfection/protocol/message"
+	"github.com/noPerfection/log"
+	"github.com/noPerfection/protocol/client"
+	clientConfig "github.com/noPerfection/protocol/client/config"
+	handlerConfig "github.com/noPerfection/protocol/handler/config"
 )
 
 // DefaultTimeout is the default time to wait before considering the message is not delivered.
@@ -217,7 +217,7 @@ func (rt *Runtime) StopService(serviceName string) error {
 
 	closeRequest := &message.Request{
 		Command:    handlerConfig.HandlerClose,
-		Parameters: key_value.New(),
+		Parameters: datatype.New(),
 	}
 
 	sock.Timeout(rt.timeout).Attempt(1)
@@ -266,7 +266,7 @@ func (rt *Runtime) IsServiceRunning(serviceName string) (bool, error) {
 
 	req := &message.Request{
 		Command:    "heartbeat",
-		Parameters: key_value.New(),
+		Parameters: datatype.New(),
 	}
 
 	_, err = sock.Request(req)
@@ -391,10 +391,10 @@ func (rt *Runtime) StartService(serviceName string, optionalParent ...*clientCon
 	args := []string{idFlag}
 
 	if len(optionalParent) == 1 {
-		parentKv, err := key_value.NewFromInterface(optionalParent[0])
+		parentKv, err := datatype.NewFromInterface(optionalParent[0])
 		if err != nil {
 			rt.refreshServiceCount(process.config.Name)
-			return "", fmt.Errorf("optionalParent: key_value.NewFromInterface(parent='%v'): %w", optionalParent[0], err)
+			return "", fmt.Errorf("optionalParent: datatype.NewFromInterface(parent='%v'): %w", optionalParent[0], err)
 		}
 		parentFlag := fmt.Sprintf("--parent=%s", parentKv.String())
 		args = append(args, parentFlag)

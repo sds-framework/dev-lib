@@ -28,7 +28,7 @@ still giving it access to service lifecycle operations through `ctx.Runtime()`.
 ## Install
 
 ```sh
-go get github.com/sds-framework/context@latest
+go get github.com/noPerfection/context@latest
 ```
 
 ## Setup
@@ -42,8 +42,8 @@ First, load the context module and config types:
 package main
 
 import (
-	sdscontext "github.com/sds-framework/context"
-	config "github.com/sds-framework/context/config"
+	sdscontext "github.com/noPerfection/context"
+	config "github.com/noPerfection/context/config"
 )
 ```
 

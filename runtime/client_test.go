@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	clientConfig "github.com/sds-framework/client-lib/config"
-	config "github.com/sds-framework/context/config"
-	handlerConfig "github.com/sds-framework/handler-lib/config"
-	"github.com/sds-framework/handler-lib/manager_client"
-	"github.com/sds-framework/log-lib"
+	config "github.com/noPerfection/context/config"
+	clientConfig "github.com/noPerfection/protocol/client/config"
+	handlerConfig "github.com/noPerfection/protocol/handler/config"
+	"github.com/noPerfection/protocol/handler/manager_client"
+	"github.com/noPerfection/log"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -56,7 +56,7 @@ func (test *TestClientSuite) SetupTest() {
 	time.Sleep(time.Millisecond * 100)
 
 	// A valid source code that we want to download
-	test.url = "github.com/sds-framework/test-manager"
+	test.url = "github.com/noPerfection/test-manager"
 
 	test.id = "test-manager"
 	test.parent = &clientConfig.Client{

@@ -1,8 +1,8 @@
 package runtime
 
 import (
-	clientConfig "github.com/sds-framework/client-lib/config"
-	config "github.com/sds-framework/context/config"
+	config "github.com/noPerfection/context/config"
+	clientConfig "github.com/noPerfection/protocol/client/config"
 )
 
 // Interface is implemented by the dependency runtime.
