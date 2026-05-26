@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	config "github.com/noPerfection/context/config"
-	clientConfig "github.com/noPerfection/protocol/client/config"
 	"github.com/noPerfection/log"
 	"github.com/noPerfection/os/path"
+	clientConfig "github.com/noPerfection/protocol/client/config"
 	"github.com/stretchr/testify/suite"
 )
 

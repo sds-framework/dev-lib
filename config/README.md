@@ -91,6 +91,12 @@ Supported handler types:
 
 Each handler must define a `category`, which consumers can use to group and classify handlers.
 
+`port` is optional on a socket; omitted means `0`. Services only need bootstrap metadata when a zero-port socket requires it:
+
+- `port: 0` with an id that does not start with `tmp/` is treated as inproc and requires `module-url`
+- `port: 0` with an id that starts with `tmp/` is treated as a tmp socket and requires `start-command`
+- non-zero ports do not require either `module-url` or `start-command`
+
 Each `command-deps` entry must name a `command` and at least one routing target: `proxies` and/or `extensions`. A command without dependencies is invalid.
 
 Each entry in `proxies` or `extensions` is a `DepTarget`: either a service name string (reference into `services`) or an inline service object. `config.Load` calls `Normalize()` to register inline services and verify references.

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"slices"
+	"strings"
 )
 
 type CommandDep struct {
@@ -13,7 +14,7 @@ type CommandDep struct {
 
 type Socket struct {
 	Id   string `json:"id"`
-	Port int    `json:"port"`
+	Port int    `json:"port,omitempty"`
 }
 
 type Handler struct {
@@ -32,7 +33,8 @@ type Handler struct {
 type Service struct {
 	Type         Type      `json:"type"`
 	Name         string    `json:"name"`
-	StartCommand string    `json:"start-command"`
+	ModuleUrl    string    `json:"module-url,omitempty"`
+	StartCommand string    `json:"start-command,omitempty"`
 	Handlers     []Handler `json:"handlers"`
 }
 
@@ -45,28 +47,62 @@ func New(name string, serviceType Type) *Service {
 	}
 }
 
-// ValidateTypes the parameters of the service
-func (s *Service) ValidateTypes() error {
-	if err := ValidateServiceType(s.Type); err != nil {
+// ValidateService validates the service metadata and socket bootstrap settings.
+func ValidateService(service Service) error {
+	if len(service.Name) == 0 {
+		return fmt.Errorf("service name is empty")
+	}
+	if err := ValidateServiceType(service.Type); err != nil {
 		return fmt.Errorf("identity.ValidateServiceType: %v", err)
 	}
 
-	for _, c := range s.Handlers {
-		if err := ValidateHandlerType(c.Type); err != nil {
+	needsModuleURL := false
+	needsStartCommand := false
+	for _, h := range service.Handlers {
+		if err := ValidateHandlerType(h.Type); err != nil {
 			return fmt.Errorf("ValidateHandlerType: %v", err)
 		}
-		if len(c.Category) == 0 {
+		if len(h.Category) == 0 {
 			return fmt.Errorf("handler category is empty")
 		}
+		if len(h.Socket.Id) == 0 {
+			return fmt.Errorf("handler '%s' socket id is empty", h.Category)
+		}
+		if h.Socket.Port < 0 {
+			return fmt.Errorf("handler '%s' socket port is negative", h.Category)
+		}
 
-		for _, dep := range c.CommandDeps {
+		if h.Socket.Port == 0 {
+			if strings.HasPrefix(h.Socket.Id, "tmp/") {
+				needsStartCommand = true
+			} else {
+				needsModuleURL = true
+			}
+		}
+
+		for _, dep := range h.CommandDeps {
 			if err := ValidateCommandDep(dep); err != nil {
 				return fmt.Errorf("ValidateCommandDep: %v", err)
 			}
 		}
 	}
 
+	if needsModuleURL && len(service.ModuleUrl) == 0 {
+		return fmt.Errorf("service('%s') has inproc socket and requires module-url", service.Name)
+	}
+	if needsStartCommand && len(service.StartCommand) == 0 {
+		return fmt.Errorf("service('%s') has tmp socket and requires start-command", service.Name)
+	}
+
 	return nil
+}
+
+// ValidateTypes validates the parameters of the service.
+func (s *Service) ValidateTypes() error {
+	if s == nil {
+		return fmt.Errorf("service struct is nil")
+	}
+	return ValidateService(*s)
 }
 
 // HandlerByCategory returns the handler config by the handler category.

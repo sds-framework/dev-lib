@@ -28,6 +28,7 @@ func TestServiceValidateTypes(t *testing.T) {
 	invalidHandler := Handler{Type: HandlerType("invalid_handler_type")}
 
 	generatedService := &Service{
+		Name:     "generated",
 		Type:     "the_invalid_type",
 		Handlers: []Handler{handlerOfType},
 	}
@@ -49,6 +50,63 @@ func TestServiceValidateTypes(t *testing.T) {
 	generatedService.Handlers = []Handler{invalidHandler}
 	if err := generatedService.ValidateTypes(); err == nil {
 		t.Fatal("ValidateTypes with invalid handler type returned nil error")
+	}
+}
+
+func TestServiceValidateSocketBootstrap(t *testing.T) {
+	service := Service{
+		Type: ProxyType,
+		Name: "inproc-service",
+		Handlers: []Handler{
+			{
+				Type:     ReplierType,
+				Category: "inproc",
+				Socket:   Socket{Id: "inproc-handler"},
+			},
+		},
+	}
+	if err := ValidateService(service); err == nil {
+		t.Fatal("ValidateService with inproc socket and no module-url returned nil error")
+	}
+
+	service.ModuleUrl = "github.com/noPerfection/inproc-service"
+	if err := ValidateService(service); err != nil {
+		t.Fatalf("ValidateService with module-url: %v", err)
+	}
+
+	service = Service{
+		Type: ProxyType,
+		Name: "tmp-service",
+		Handlers: []Handler{
+			{
+				Type:     ReplierType,
+				Category: "tmp",
+				Socket:   Socket{Id: "tmp/service.sock"},
+			},
+		},
+	}
+	if err := ValidateService(service); err == nil {
+		t.Fatal("ValidateService with tmp socket and no start-command returned nil error")
+	}
+
+	service.StartCommand = "go run ./cmd/tmp-service"
+	if err := ValidateService(service); err != nil {
+		t.Fatalf("ValidateService with start-command: %v", err)
+	}
+
+	service = Service{
+		Type: ProxyType,
+		Name: "tcp-service",
+		Handlers: []Handler{
+			{
+				Type:     ReplierType,
+				Category: "tcp",
+				Socket:   Socket{Id: "tcp-service", Port: 4101},
+			},
+		},
+	}
+	if err := ValidateService(service); err != nil {
+		t.Fatalf("ValidateService with tcp socket and no bootstrap fields: %v", err)
 	}
 }
 

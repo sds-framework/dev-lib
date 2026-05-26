@@ -6,12 +6,12 @@ import (
 
 	config "github.com/noPerfection/context/config"
 	"github.com/noPerfection/datatype"
-	"github.com/noPerfection/protocol/message"
 	"github.com/noPerfection/log"
 	clientConfig "github.com/noPerfection/protocol/client/config"
 	"github.com/noPerfection/protocol/handler/base"
 	handlerConfig "github.com/noPerfection/protocol/handler/config"
 	"github.com/noPerfection/protocol/handler/replier"
+	"github.com/noPerfection/protocol/message"
 )
 
 const (

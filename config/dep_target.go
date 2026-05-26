@@ -87,21 +87,8 @@ func ValidateDepTarget(t DepTarget) error {
 	if hasRef {
 		return nil
 	}
-	if err := ValidateServiceType(t.Inline.Type); err != nil {
+	if err := t.Inline.ValidateTypes(); err != nil {
 		return fmt.Errorf("inline service: %w", err)
-	}
-	for _, h := range t.Inline.Handlers {
-		if err := ValidateHandlerType(h.Type); err != nil {
-			return fmt.Errorf("inline service handler: %w", err)
-		}
-		if len(h.Category) == 0 {
-			return fmt.Errorf("inline service handler category is empty")
-		}
-		for _, dep := range h.CommandDeps {
-			if err := ValidateCommandDep(dep); err != nil {
-				return fmt.Errorf("inline service ValidateCommandDep: %w", err)
-			}
-		}
 	}
 	return nil
 }
